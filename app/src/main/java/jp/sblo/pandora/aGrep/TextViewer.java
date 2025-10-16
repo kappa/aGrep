@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 
 import org.mozilla.universalchardet.UniversalDetector;
 
-import android.app.ActionBar;
-import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -31,7 +29,10 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class TextViewer extends Activity implements OnItemLongClickListener , OnItemClickListener{
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class TextViewer extends AppCompatActivity implements OnItemLongClickListener , OnItemClickListener{
     public  static final String EXTRA_LINE = "line";
     public  static final String EXTRA_QUERY = "query";
     public  static final String EXTRA_PATH = "path";
@@ -49,9 +50,11 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.textviewer);
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         mPrefs = Prefs.loadPrefes(getApplicationContext());
         mTextPreview = (TextPreview)findViewById(R.id.TextPreview);
@@ -185,7 +188,7 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
 
     }
     @Override
-    public boolean onMenuItemSelected(int featureId, MenuItem item)
+    public boolean onOptionsItemSelected(MenuItem item)
     {
         int id = item.getItemId();
         if (id == R.id.menu_viewer) {
@@ -200,11 +203,12 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
             }
             startActivity(intent);
             return true;
-        }else if ( id == android.R.id.home ){
+        }
+        if (id == android.R.id.home) {
             finish();
             return true;
         }
-        return super.onMenuItemSelected(featureId, item);
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
