@@ -16,8 +16,6 @@ import java.util.regex.Pattern;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import android.annotation.SuppressLint;
-import android.app.ActionBar;
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.DialogInterface;
@@ -32,10 +30,13 @@ import android.text.style.ForegroundColorSpan;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+
 
 
 @SuppressLint("DefaultLocale")
-public class Search extends Activity implements GrepView.Callback
+public class Search extends AppCompatActivity implements GrepView.Callback
 {
     private GrepView mGrepView;
     private GrepView.GrepAdapter mAdapter;
@@ -50,9 +51,11 @@ public class Search extends Activity implements GrepView.Callback
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         mPrefs = Prefs.loadPrefes(this);
 
@@ -416,13 +419,12 @@ public class Search extends Activity implements GrepView.Callback
     }
 
     @Override
-    public boolean onMenuItemSelected(int featureId, MenuItem item) {
+    public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        switch (id) {
-            case android.R.id.home:
-                finish();
-                return true;
+        if (id == android.R.id.home) {
+            finish();
+            return true;
         }
-        return super.onMenuItemSelected(featureId, item);
+        return super.onOptionsItemSelected(item);
     }
 }
