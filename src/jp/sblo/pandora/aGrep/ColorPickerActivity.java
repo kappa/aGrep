@@ -1,8 +1,5 @@
 package jp.sblo.pandora.aGrep;
 
-import android.app.ActionBar;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -20,7 +17,12 @@ import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class ColorPickerActivity extends Activity implements View.OnClickListener {
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+public class ColorPickerActivity extends AppCompatActivity implements View.OnClickListener {
 
     static class ColorName{
         int color;
@@ -47,9 +49,10 @@ public class ColorPickerActivity extends Activity implements View.OnClickListene
         setResult( RESULT_CANCELED );
         setContentView(R.layout.colorpickeractivity);
 
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         final Intent intent = getIntent();
         mTitle = intent.getStringExtra(EXTRA_TITLE);
@@ -134,7 +137,7 @@ public class ColorPickerActivity extends Activity implements View.OnClickListene
                         }
                     },
                 });
-                new AlertDialog.Builder(this)
+                new MaterialAlertDialogBuilder(this)
                 .setIcon(R.drawable.icon)
                 .setTitle(R.string.color_picker_input)
                 .setView(edtInput)

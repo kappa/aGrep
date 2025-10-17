@@ -44,6 +44,17 @@
   <string name="label_add_linenumber">行番号を付けて開く</string>
   <string name="summary_add_linenumber">Jota+ または Jota Text Editorで開く時、指定行番号まで自動的に移動するようになります。</string>
 
+  <string name="summary_color_value">現在の色: %1$s</string>
+  <string name="toolbar_navigation_cd">前の画面に戻る</string>
+  <string name="content_desc_history">検索履歴を表示</string>
+  <string name="content_desc_search">検索を開始</string>
+  <string name="content_desc_clear">検索語をクリア</string>
+  <string name="content_desc_add_directory">ディレクトリを追加</string>
+  <string name="content_desc_add_extension">拡張子を追加</string>
+  <string name="label_history">履歴</string>
+  <string name="label_search">検索</string>
+  <string name="label_clear">クリア</string>
+
   <string name="label_copied">クリップボードにコピーしました。</string>
 
     <string name="color_picker_input">カラーコード入力</string>

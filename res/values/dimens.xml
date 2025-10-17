@@ -4,5 +4,8 @@
     <dimen name="color_icon_height">72dp</dimen>
     <dimen name="color_icon_padding">3dp</dimen>
     <integer name="color_picker_columns">3</integer>
+    <dimen name="content_padding">16dp</dimen>
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_large">16dp</dimen>
 
 </resources>

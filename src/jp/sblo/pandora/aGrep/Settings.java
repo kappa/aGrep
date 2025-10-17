@@ -1,327 +1,272 @@
 package jp.sblo.pandora.aGrep;
 
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.widget.ArrayAdapter;
+import android.widget.TextView;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.SearchManager;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.os.Bundle;
-import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.inputmethod.EditorInfo;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-
-public class Settings extends Activity {
-
-    final static int REQUEST_CODE_ADDDIC = 0x1001;
+public class Settings extends AppCompatActivity {
 
     private Prefs mPrefs;
-    private LinearLayout mDirListView;
-    private LinearLayout mExtListView;
-    private View.OnLongClickListener mDirListener;
-    private View.OnLongClickListener mExtListener;
-    private CompoundButton.OnCheckedChangeListener mCheckListener;
+    private CheckedStringAdapter mDirAdapter;
+    private CheckedStringAdapter mExtAdapter;
+    private MaterialAutoCompleteTextView mQueryInput;
     private ArrayAdapter<String> mRecentAdapter;
-    private Context mContext;
+    private SwitchMaterial mRegularExpressionSwitch;
+    private SwitchMaterial mIgnoreCaseSwitch;
+    private ActivityResultLauncher<Intent> directoryPickerLauncher;
 
-    /** Called when the activity is first created. */
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mContext = this;
-
         mPrefs = Prefs.loadPrefes(this);
-
         setContentView(R.layout.main);
 
-        mDirListView = (LinearLayout)findViewById(R.id.listdir);
-        mExtListView = (LinearLayout)findViewById(R.id.listext);
-
-        mDirListener = new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view)
-            {
-                final CheckedString strItem = (CheckedString) view.getTag();
-                // Show Dialog
-                new AlertDialog.Builder(mContext)
-                .setTitle(R.string.label_remove_item_title)
-                .setMessage( getString(R.string.label_remove_item , strItem ) )
-                .setPositiveButton(R.string.label_OK, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        mPrefs.mDirList.remove(strItem);
-                        refreshDirList();
-                        mPrefs.savePrefs(mContext);
-                    }
-                })
-                .setNegativeButton(R.string.label_CANCEL, null )
-                .setCancelable(true)
-                .show();
-                return true;
-            }
-        };
-
-        mExtListener = new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view)
-            {
-                final String strText = (String) ((TextView)view).getText();
-                final CheckedString strItem = (CheckedString) view.getTag();
-                // Show Dialog
-                new AlertDialog.Builder(mContext)
-                .setTitle(R.string.label_remove_item_title)
-                .setMessage( getString(R.string.label_remove_item , strText ) )
-                .setPositiveButton(R.string.label_OK, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        mPrefs.mExtList.remove(strItem);
-                        refreshExtList();
-                        mPrefs.savePrefs(mContext);
-                    }
-                })
-                .setNegativeButton(R.string.label_CANCEL, null )
-                .setCancelable(true)
-                .show();
-                return true;
-            }
-        };
-
-        mCheckListener = new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                final CheckedString strItem = (CheckedString) buttonView.getTag();
-                strItem.checked = isChecked;
-                mPrefs.savePrefs(mContext);
-            }
-        };
-
-        refreshDirList();
-        refreshExtList();
-
-        ImageButton btnAddDir = (ImageButton) findViewById(R.id.adddir);
-        ImageButton btnAddExt = (ImageButton) findViewById(R.id.addext);
-
-        btnAddDir.setOnClickListener( new View.OnClickListener() {
-
-            @Override
-            public void onClick(View v)
-            {
-                // ファイル選択画面呼び出し
-                Intent intent = new Intent( mContext , FileSelectorActivity.class );
-                startActivityForResult(intent, REQUEST_CODE_ADDDIC);
-            }
-        });
-
-        btnAddExt.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view)
-            {
-                // Create EditText
-                final EditText edtInput = new EditText(mContext);
-                edtInput.setSingleLine();
-                // Show Dialog
-                new AlertDialog.Builder(mContext)
-                .setTitle(R.string.label_addext)
-                .setView(edtInput)
-                .setPositiveButton(R.string.label_OK, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        /* OKボタンをクリックした時の処理 */
-
-                        String ext = edtInput.getText().toString();
-                        if (ext != null && ext.length()>0 ) {
-                            // 二重チェック
-                            for( CheckedString t : mPrefs.mExtList ){
-                                if ( t.string.equalsIgnoreCase(ext)){
-                                    return;
-                                }
-                            }
-                            mPrefs.mExtList.add(new CheckedString(ext));
-                            refreshExtList();
-                            mPrefs.savePrefs(mContext);
-                        }
-                    }
-                })
-                .setNeutralButton(R.string.label_no_extension, new DialogInterface.OnClickListener(){
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        /* 拡張子無しボタンをクリックした時の処理 */
-
-                        String ext = "*";
-                        // 二重チェック
-                        for( CheckedString t : mPrefs.mExtList ){
-                            if ( t.string.equalsIgnoreCase(ext)){
-                                return;
-                            }
-                        }
-                        mPrefs.mExtList.add(new CheckedString(ext));
-                        refreshExtList();
-                        mPrefs.savePrefs(mContext);
-                    }
-                })
-                .setNegativeButton(R.string.label_CANCEL, null )
-                .setCancelable(true)
-                .show();
-            }
-        });
-
-
-        final CheckBox chkRe = (CheckBox)findViewById(R.id.checkre);
-        final CheckBox chkIc = (CheckBox)findViewById(R.id.checkignorecase);
-
-        chkRe.setChecked(mPrefs.mRegularExrpression);
-        chkIc.setChecked(mPrefs.mIgnoreCase);
-
-        chkRe.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view)
-            {
-                mPrefs.mRegularExrpression = chkRe.isChecked();
-                mPrefs.savePrefs(mContext);
-            }
-        });
-        chkIc.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view)
-            {
-                mPrefs.mIgnoreCase = chkIc.isChecked();
-                mPrefs.savePrefs(mContext);
-            }
-        });
-
-        final AutoCompleteTextView edittext = (AutoCompleteTextView) findViewById(R.id.EditText01);
-        edittext.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View v, int keyCode, KeyEvent event)
-            {
-                if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_UP ) {
-                    String text = edittext.getEditableText().toString();
-                    Intent it = new Intent(mContext,Search.class);
-                    it.setAction(Intent.ACTION_SEARCH);
-                    it.putExtra(SearchManager.QUERY,text );
-                    startActivity( it );
-                    return true;
-                }
-                return false;
-            }
-        });
-        mRecentAdapter = new ArrayAdapter<String>(mContext,android.R.layout.simple_dropdown_item_1line, new ArrayList<String>());
-        edittext.setAdapter(mRecentAdapter);
-
-        ImageButton clrBtn = (ImageButton) findViewById(R.id.ButtonClear);
-        clrBtn.setOnClickListener(new OnClickListener() {
-            public void onClick(View view)
-            {
-                edittext.setText("");
-                edittext.requestFocus();
-            }
-        });
-
-        ImageButton searchBtn = (ImageButton) findViewById(R.id.ButtonSearch);
-        searchBtn.setOnClickListener(new OnClickListener() {
-            public void onClick(View view)
-            {
-                String text = edittext.getText().toString();
-                Intent it = new Intent(mContext,Search.class);
-                it.setAction(Intent.ACTION_SEARCH);
-                it.putExtra(SearchManager.QUERY,text );
-                startActivity( it );
-            }
-        });
-
-        ImageButton historyBtn = (ImageButton) findViewById(R.id.ButtonHistory);
-        historyBtn.setOnClickListener(new OnClickListener() {
-            public void onClick(View view)
-            {
-                edittext.showDropDown();
-            }
-        });
-
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
-        super.onActivityResult(requestCode, resultCode, data);
-
-        // ディレクトリ選択画面からの応答
-        if (requestCode == REQUEST_CODE_ADDDIC && resultCode == RESULT_OK && data != null) {
-            final String dirname = data.getExtras().getString(FileSelectorActivity.INTENT_FILEPATH );
-            if (dirname != null && dirname.length()>0 ) {
-                // 二重チェック
-                for( CheckedString t : mPrefs.mDirList ){
-                    if ( t.string.equalsIgnoreCase(dirname)){
-                        return;
-                    }
-                }
-                mPrefs.mDirList.add(new CheckedString(dirname));
-                refreshDirList();
-                mPrefs.savePrefs(mContext);
-            }
+        final Toolbar toolbar = findViewById(R.id.topAppBar);
+        setSupportActionBar(toolbar);
+        final ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(false);
+            actionBar.setDisplayShowHomeEnabled(false);
         }
 
+        directoryPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                this::handleDirectoryResult);
+
+        mQueryInput = findViewById(R.id.query_input);
+        mQueryInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        mQueryInput.setOnEditorActionListener(this::onQueryEditorAction);
+        mRecentAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line,
+                new ArrayList<String>());
+        mQueryInput.setAdapter(mRecentAdapter);
+
+        final MaterialButton historyButton = findViewById(R.id.button_history);
+        historyButton.setOnClickListener(v -> mQueryInput.showDropDown());
+
+        final MaterialButton searchButton = findViewById(R.id.button_search);
+        searchButton.setOnClickListener(v -> startSearch(mQueryInput.getText()));
+
+        final MaterialButton clearButton = findViewById(R.id.button_clear);
+        clearButton.setOnClickListener(v -> {
+            if (mQueryInput.getText() != null) {
+                mQueryInput.getText().clear();
+            }
+            mQueryInput.requestFocus();
+        });
+
+        final MaterialButton addDirButton = findViewById(R.id.adddir);
+        addDirButton.setOnClickListener(v -> {
+            final Intent intent = new Intent(Settings.this, FileSelectorActivity.class);
+            directoryPickerLauncher.launch(intent);
+        });
+
+        final MaterialButton addExtButton = findViewById(R.id.addext);
+        addExtButton.setOnClickListener(v -> showAddExtensionDialog());
+
+        mRegularExpressionSwitch = findViewById(R.id.checkre);
+        mIgnoreCaseSwitch = findViewById(R.id.checkignorecase);
+
+        mRegularExpressionSwitch.setChecked(mPrefs.mRegularExrpression);
+        mIgnoreCaseSwitch.setChecked(mPrefs.mIgnoreCase);
+
+        mRegularExpressionSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            mPrefs.mRegularExrpression = isChecked;
+            mPrefs.savePrefs(Settings.this);
+        });
+        mIgnoreCaseSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            mPrefs.mIgnoreCase = isChecked;
+            mPrefs.savePrefs(Settings.this);
+        });
+
+        final RecyclerView dirRecycler = findViewById(R.id.directory_list);
+        dirRecycler.setLayoutManager(new LinearLayoutManager(this));
+        mDirAdapter = new CheckedStringAdapter(mPrefs.mDirList,
+                this::confirmDirectoryRemoval,
+                false);
+        dirRecycler.setAdapter(mDirAdapter);
+
+        final RecyclerView extRecycler = findViewById(R.id.extension_list);
+        extRecycler.setLayoutManager(new LinearLayoutManager(this));
+        mExtAdapter = new CheckedStringAdapter(mPrefs.mExtList,
+                this::confirmExtensionRemoval,
+                true);
+        extRecycler.setAdapter(mExtAdapter);
+
+        refreshLists();
     }
 
-    void setListItem( LinearLayout view ,
-            ArrayList<CheckedString> list ,
-            View.OnLongClickListener logclicklistener ,
-            CompoundButton.OnCheckedChangeListener checkedChangeListener )
-    {
-        view.removeAllViews();
+    private boolean onQueryEditorAction(TextView textView, int actionId, android.view.KeyEvent keyEvent) {
+        if (actionId == EditorInfo.IME_ACTION_SEARCH
+                || (keyEvent != null && keyEvent.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
+                && keyEvent.getAction() == android.view.KeyEvent.ACTION_UP)) {
+            startSearch(textView.getText());
+            return true;
+        }
+        return false;
+    }
+
+    private void startSearch(CharSequence query) {
+        if (query == null) {
+            return;
+        }
+        final String text = query.toString();
+        final Intent intent = new Intent(this, Search.class);
+        intent.setAction(Intent.ACTION_SEARCH);
+        intent.putExtra(android.app.SearchManager.QUERY, text);
+        startActivity(intent);
+    }
+
+    private void handleDirectoryResult(ActivityResult result) {
+        if (result.getResultCode() != RESULT_OK) {
+            return;
+        }
+        final Intent data = result.getData();
+        if (data == null || data.getExtras() == null) {
+            return;
+        }
+        final String dirname = data.getExtras().getString(FileSelectorActivity.INTENT_FILEPATH);
+        if (dirname == null || dirname.length() == 0) {
+            return;
+        }
+        for (CheckedString checkedString : mPrefs.mDirList) {
+            if (checkedString.string.equalsIgnoreCase(dirname)) {
+                return;
+            }
+        }
+        mPrefs.mDirList.add(new CheckedString(dirname));
+        persistDirectoryChanges();
+    }
+
+    private void showAddExtensionDialog() {
+        final TextInputLayout inputLayout = new TextInputLayout(this);
+        inputLayout.setHint(getString(R.string.label_addext));
+        final TextInputEditText editText = new TextInputEditText(inputLayout.getContext());
+        editText.setSingleLine(true);
+        inputLayout.addView(editText);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.label_addext)
+                .setView(inputLayout)
+                .setPositiveButton(R.string.label_OK, (dialog, which) -> {
+                    final String ext = editText.getText() != null ? editText.getText().toString() : "";
+                    addExtension(ext);
+                })
+                .setNeutralButton(R.string.label_no_extension, (dialog, which) -> addExtension("*"))
+                .setNegativeButton(R.string.label_CANCEL, null)
+                .show();
+    }
+
+    private void addExtension(@NonNull String ext) {
+        if (ext.length() == 0) {
+            return;
+        }
+        for (CheckedString checkedString : mPrefs.mExtList) {
+            if (checkedString.string.equalsIgnoreCase(ext)) {
+                return;
+            }
+        }
+        mPrefs.mExtList.add(new CheckedString(ext));
+        persistExtensionChanges();
+    }
+
+    private void confirmDirectoryRemoval(CheckedString item) {
+        showRemovalDialog(item.string, () -> {
+            mPrefs.mDirList.remove(item);
+            persistDirectoryChanges();
+        });
+    }
+
+    private void confirmExtensionRemoval(CheckedString item) {
+        final String label = "*".equals(item.string)
+                ? getString(R.string.label_no_extension)
+                : item.string;
+        showRemovalDialog(label, () -> {
+            mPrefs.mExtList.remove(item);
+            persistExtensionChanges();
+        });
+    }
+
+    private void showRemovalDialog(String text, Runnable onConfirm) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.label_remove_item_title)
+                .setMessage(getString(R.string.label_remove_item, text))
+                .setPositiveButton(R.string.label_OK, (dialog, which) -> onConfirm.run())
+                .setNegativeButton(R.string.label_CANCEL, null)
+                .show();
+    }
+
+    private void persistDirectoryChanges() {
+        sortCheckedStrings(mPrefs.mDirList);
+        refreshLists();
+        mPrefs.savePrefs(this);
+    }
+
+    private void persistExtensionChanges() {
+        sortCheckedStrings(mPrefs.mExtList);
+        refreshLists();
+        mPrefs.savePrefs(this);
+    }
+
+    private void refreshLists() {
+        mDirAdapter.updateItems(mPrefs.mDirList);
+        mExtAdapter.updateItems(mPrefs.mExtList);
+    }
+
+    private void sortCheckedStrings(List<CheckedString> list) {
+        if (list == null) {
+            return;
+        }
         Collections.sort(list, new Comparator<CheckedString>() {
             @Override
-            public int compare(CheckedString object1, CheckedString object2) {
-                return object1.string.compareToIgnoreCase(object2.string);
+            public int compare(CheckedString o1, CheckedString o2) {
+                return o1.string.compareToIgnoreCase(o2.string);
             }
         });
-        for( CheckedString s : list ){
-            CheckBox v = (CheckBox)View.inflate(this, R.layout.list_dir, null);
-            if ( s.equals("*") ){
-                v.setText(R.string.label_no_extension);
-            }else{
-                v.setText(s.string);
-            }
-            v.setChecked( s.checked );
-            v.setTag(s);
-            v.setOnLongClickListener(logclicklistener);
-            v.setOnCheckedChangeListener(checkedChangeListener);
-            view.addView(v);
-        }
-    }
-
-    private void refreshDirList(){
-        setListItem( mDirListView , mPrefs.mDirList , mDirListener , mCheckListener);
-    }
-    private void refreshExtList(){
-        setListItem( mExtListView , mPrefs.mExtList , mExtListener , mCheckListener);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
+        final MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.optionmenu, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        if ( item.getItemId() == R.id.menu_option ){
-            Intent intent = new Intent( this ,  OptionActivity.class );
-            startActivity(intent);
+        if (item.getItemId() == R.id.menu_option) {
+            startActivity(new Intent(this, OptionActivity.class));
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -329,10 +274,91 @@ public class Settings extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        mPrefs = Prefs.loadPrefes(this);
+        mRegularExpressionSwitch.setChecked(mPrefs.mRegularExrpression);
+        mIgnoreCaseSwitch.setChecked(mPrefs.mIgnoreCase);
+        refreshLists();
 
-        final List<String> recent = mPrefs.getRecent(mContext);
+        final List<String> recent = mPrefs.getRecent(this);
         mRecentAdapter.clear();
         mRecentAdapter.addAll(recent);
         mRecentAdapter.notifyDataSetChanged();
+    }
+
+    private class CheckedStringAdapter extends RecyclerView.Adapter<CheckedStringAdapter.ViewHolder> {
+
+        private final RemovalCallback removalCallback;
+        private final boolean labelNoExtension;
+        private final List<CheckedString> items = new ArrayList<>();
+
+        CheckedStringAdapter(List<CheckedString> initial,
+                             RemovalCallback removalCallback,
+                             boolean labelNoExtension) {
+            this.removalCallback = removalCallback;
+            this.labelNoExtension = labelNoExtension;
+            updateItems(initial);
+        }
+
+        void updateItems(List<CheckedString> newItems) {
+            items.clear();
+            if (newItems != null) {
+                items.addAll(newItems);
+                Collections.sort(items, new Comparator<CheckedString>() {
+                    @Override
+                    public int compare(CheckedString o1, CheckedString o2) {
+                        return o1.string.compareToIgnoreCase(o2.string);
+                    }
+                });
+            }
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            final View view = getLayoutInflater().inflate(R.layout.item_checked_row, parent, false);
+            return new ViewHolder((MaterialCheckBox) view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            holder.bind(items.get(position));
+        }
+
+        @Override
+        public int getItemCount() {
+            return items.size();
+        }
+
+        class ViewHolder extends RecyclerView.ViewHolder {
+            private final MaterialCheckBox checkBox;
+
+            ViewHolder(MaterialCheckBox checkBox) {
+                super(checkBox);
+                this.checkBox = checkBox;
+            }
+
+            void bind(CheckedString data) {
+                checkBox.setOnCheckedChangeListener(null);
+                final String display = labelNoExtension && "*".equals(data.string)
+                        ? getString(R.string.label_no_extension)
+                        : data.string;
+                checkBox.setText(display);
+                checkBox.setChecked(data.checked);
+                checkBox.setContentDescription(display);
+                checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    data.checked = isChecked;
+                    mPrefs.savePrefs(Settings.this);
+                });
+                checkBox.setOnLongClickListener(v -> {
+                    removalCallback.onRemove(data);
+                    return true;
+                });
+            }
+        }
+    }
+
+    private interface RemovalCallback {
+        void onRemove(CheckedString item);
     }
 }

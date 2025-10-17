@@ -16,8 +16,6 @@ import java.util.regex.Pattern;
 import org.mozilla.universalchardet.UniversalDetector;
 
 import android.annotation.SuppressLint;
-import android.app.ActionBar;
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.DialogInterface;
@@ -32,10 +30,13 @@ import android.text.style.ForegroundColorSpan;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+
 
 
 @SuppressLint("DefaultLocale")
-public class Search extends Activity implements GrepView.Callback
+public class Search extends AppCompatActivity implements GrepView.Callback
 {
     private GrepView mGrepView;
     private GrepView.GrepAdapter mAdapter;
@@ -50,9 +51,10 @@ public class Search extends Activity implements GrepView.Callback
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         mPrefs = Prefs.loadPrefes(this);
 
