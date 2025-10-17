@@ -15,8 +15,33 @@
       android:layout_height="fill_parent" android:id="@+id/ButtonClear" />
   </LinearLayout>
   -->
+  <LinearLayout
+    android:id="@+id/searchStatusContainer"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="8dp"
+    android:visibility="gone">
+
+    <ProgressBar
+      android:id="@+id/searchProgress"
+      style="?android:attr/progressBarStyleSmall"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:visibility="gone" />
+
+    <TextView
+      android:id="@+id/searchStatus"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="8dp"
+      android:text="@string/grep_spinner"
+      android:textAppearance="?android:attr/textAppearanceSmall" />
+  </LinearLayout>
   <jp.sblo.pandora.aGrep.GrepView
     android:id="@+id/DicView01" android:layout_width="fill_parent"
-    android:layout_height="fill_parent" />
+    android:layout_height="0dp"
+    android:layout_weight="1" />
 
 </LinearLayout>
