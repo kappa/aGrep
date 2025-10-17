@@ -2,11 +2,14 @@ package jp.sblo.pandora.aGrep;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -14,13 +17,18 @@ import org.mozilla.universalchardet.UniversalDetector;
 
 import android.app.ActionBar;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -30,11 +38,13 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.core.content.FileProvider;
 
 public class TextViewer extends Activity implements OnItemLongClickListener , OnItemClickListener{
     public  static final String EXTRA_LINE = "line";
     public  static final String EXTRA_QUERY = "query";
     public  static final String EXTRA_PATH = "path";
+    private static final String TAG = "TextViewer";
 
     private TextLoadTask mTask;
     private String mPatternText;
@@ -42,6 +52,9 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
     private Prefs mPrefs;
     private String mPath;
     private TextPreview mTextPreview;
+    private Uri mSourceUri;
+    private Uri mGrantedUri;
+    private File mSharedCacheFile;
     ArrayList<CharSequence> mData = new ArrayList<CharSequence>();
 
     /** Called when the activity is first created. */
@@ -61,26 +74,77 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
 
         Intent it = getIntent();
         if (it!=null){
-
-            Bundle extra = it.getExtras();
-            if ( extra!=null ){
-                mPath = extra.getString(EXTRA_PATH);
-                mPatternText = extra.getString(EXTRA_QUERY);
-                mLine = extra.getInt(EXTRA_LINE);
-
-                if ( !mPrefs.mRegularExrpression ){
-                    mPatternText = Search.escapeMetaChar(mPatternText);
-                }
-
-                setTitle( mPath + " - aGrep" );
-                mTask = new TextLoadTask();
-                mTask.execute(mPath);
-            }
-
+            handleIntent(it);
         }
     }
 
-    class TextLoadTask extends AsyncTask<String, Integer, Boolean >{
+    private void handleIntent(Intent intent) {
+        Bundle extra = intent.getExtras();
+        mSourceUri = null;
+        mPath = null;
+        mPatternText = null;
+        mLine = 0;
+
+        if (extra != null && extra.containsKey(EXTRA_PATH)) {
+            mPath = extra.getString(EXTRA_PATH);
+            if (!TextUtils.isEmpty(mPath)) {
+                mSourceUri = Uri.fromFile(new File(mPath));
+            }
+            mPatternText = extra.getString(EXTRA_QUERY);
+            mLine = extra.getInt(EXTRA_LINE);
+        } else if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+            mSourceUri = intent.getData();
+            if ("file".equals(mSourceUri.getScheme())) {
+                mPath = mSourceUri.getPath();
+            } else if ("content".equals(mSourceUri.getScheme())) {
+                mPath = resolveDisplayName(mSourceUri);
+            } else {
+                mPath = mSourceUri.toString();
+            }
+            if (extra != null) {
+                mPatternText = extra.getString(EXTRA_QUERY);
+                mLine = extra.getInt(EXTRA_LINE, 0);
+            }
+        }
+
+        if (mSourceUri == null) {
+            finish();
+            return;
+        }
+
+        if (mPatternText == null) {
+            mPatternText = "";
+        } else if (!mPrefs.mRegularExrpression) {
+            mPatternText = Search.escapeMetaChar(mPatternText);
+        }
+
+        if (!TextUtils.isEmpty(mPath)) {
+            setTitle( mPath + " - aGrep" );
+        } else {
+            setTitle(getString(R.string.app_name));
+        }
+        mTask = new TextLoadTask();
+        mTask.execute(mSourceUri);
+    }
+
+    private String resolveDisplayName(Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getString(0);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to resolve display name", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return uri.toString();
+    }
+
+    class TextLoadTask extends AsyncTask<Uri, Integer, Boolean >{
         int mOffsetForLine=-1;
 
         @Override
@@ -89,62 +153,81 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
             super.onPreExecute();
         }
         @Override
-        protected Boolean doInBackground(String... params)
+        protected Boolean doInBackground(Uri... params)
         {
-            File f = new File(params[0]);
-            if ( f.exists() ){
+            if (params == null || params.length == 0) {
+                return false;
+            }
+            Uri target = params[0];
+            if (target == null) {
+                return false;
+            }
 
-                InputStream is;
-                try {
-                    is = new BufferedInputStream( new FileInputStream( f ) , 65536 );
-                    is.mark(65536);
-
-                    String encode = null;
-                    //  文字コードの判定
-                    try{
-                        UniversalDetector detector = new UniversalDetector();
-                        try{
-                            int nread;
-                            byte[] buff = new byte[4096];
-                            if ((nread = is.read(buff)) > 0 ) {
-                                detector.handleData(buff, 0, nread);
-                            }
-                            detector.dataEnd();
-                        }
-                        catch (IOException e) {
-                            e.printStackTrace();
-                            is.close();
-                            return false;
-                        }
-                        encode = detector.getCharset();
-                        is.reset();
-                        detector.reset();
-                        detector.destroy();
+            InputStream rawStream = null;
+            BufferedInputStream is = null;
+            BufferedReader br = null;
+            try {
+                if ("file".equals(target.getScheme()) || target.getScheme() == null) {
+                    File f = new File(target.getPath());
+                    if (!f.exists()) {
+                        return false;
                     }
-                    catch( UniversalDetector.DetectorException e ){
+                    rawStream = new FileInputStream(f);
+                } else {
+                    rawStream = getContentResolver().openInputStream(target);
+                    if (rawStream == null) {
+                        return false;
                     }
-                    BufferedReader br=null;
-                    try {
-                        if ( encode != null ){
-                            br = new BufferedReader( new InputStreamReader( is , encode ) , 8192 );
-                        }else{
-                            br = new BufferedReader( new InputStreamReader( is ) , 8192 );
-                        }
-
-                        String text;
-                        while(  ( text = br.readLine() )!=null ){
-                            mData.add( text );
-
-                        }
-                        br.close();
-                        is.close();
-                        return true;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } catch (IOException e1) {
-                    e1.printStackTrace();
                 }
+
+                is = new BufferedInputStream(rawStream , 65536 );
+                is.mark(65536);
+
+                String encode = null;
+                //  文字コードの判定
+                try{
+                    UniversalDetector detector = new UniversalDetector();
+                    try{
+                        int nread;
+                        byte[] buff = new byte[4096];
+                        if ((nread = is.read(buff)) > 0 ) {
+                            detector.handleData(buff, 0, nread);
+                        }
+                        detector.dataEnd();
+                    }
+                    catch (IOException e) {
+                        e.printStackTrace();
+                        return false;
+                    }
+                    encode = detector.getCharset();
+                    is.reset();
+                    detector.reset();
+                    detector.destroy();
+                }
+                catch( UniversalDetector.DetectorException e ){
+                }
+                try {
+                    if ( encode != null ){
+                        br = new BufferedReader( new InputStreamReader( is , encode ) , 8192 );
+                    }else{
+                        br = new BufferedReader( new InputStreamReader( is ) , 8192 );
+                    }
+
+                    String text;
+                    while(  ( text = br.readLine() )!=null ){
+                        mData.add( text );
+
+                    }
+                    return true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } finally {
+                closeQuietly(br);
+                closeQuietly(is);
+                closeQuietly(rawStream);
             }
             return false;
         }
@@ -156,22 +239,35 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
                 TextPreview.Adapter adapter = new TextPreview.Adapter(getApplicationContext(),  R.layout.textpreview_row, R.id.TextPreview, mData);
                 mData = null;
 
-                Pattern pattern;
+                Pattern pattern = null;
 
-                if ( mPrefs.mIgnoreCase ){
-                    pattern = Pattern.compile(mPatternText, Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE|Pattern.MULTILINE );
-                }else{
-                    pattern = Pattern.compile(mPatternText);
+                if (!TextUtils.isEmpty(mPatternText)) {
+                    if ( mPrefs.mIgnoreCase ){
+                        pattern = Pattern.compile(mPatternText, Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE|Pattern.MULTILINE );
+                    }else{
+                        pattern = Pattern.compile(mPatternText);
+                    }
                 }
 
                 adapter.setFormat(pattern , mPrefs.mHighlightFg , mPrefs.mHighlightBg , mPrefs.mFontSize );
                 mTextPreview.setAdapter( adapter );
 
                 int height = mTextPreview.getHeight();
-                mTextPreview.setSelectionFromTop( mLine-1 , height / 4 );
+                if (mLine > 0) {
+                    mTextPreview.setSelectionFromTop( mLine-1 , height / 4 );
+                }
                 adapter = null;
                 mTextPreview = null;
                 mTask = null;
+            }
+        }
+    }
+
+    private void closeQuietly(Closeable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (IOException e) {
             }
         }
     }
@@ -189,16 +285,14 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
     {
         int id = item.getItemId();
         if (id == R.id.menu_viewer) {
-            // ビュワー呼び出し
-            Intent intent = new Intent();
-            intent.setAction(Intent.ACTION_VIEW);
+            Integer lineNumber = null;
             if ( mPrefs.addLineNumber ){
                 TextPreview textPreview = (TextPreview)findViewById(R.id.TextPreview);
-                intent.setDataAndType(Uri.parse("file://" + mPath + "?line=" + textPreview.getFirstVisiblePosition() ), "text/plain");
-            }else{
-                intent.setDataAndType(Uri.parse("file://" + mPath), "text/plain");
+                if (textPreview != null) {
+                    lineNumber = textPreview.getFirstVisiblePosition();
+                }
             }
-            startActivity(intent);
+            launchExternalViewer(lineNumber);
             return true;
         }else if ( id == android.R.id.home ){
             finish();
@@ -207,18 +301,115 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
         return super.onMenuItemSelected(featureId, item);
     }
 
+    private void launchExternalViewer(Integer lineNumber) {
+        Uri uri = prepareSharedUri();
+        if (uri == null) {
+            Toast.makeText(this, R.string.label_open_external_failed, Toast.LENGTH_LONG).show();
+            return;
+        }
+        Uri shareUri = uri;
+        if (lineNumber != null) {
+            shareUri = uri.buildUpon().appendQueryParameter("line", Integer.toString(lineNumber)).build();
+        }
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(shareUri, "text/plain");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(intent);
+            mGrantedUri = shareUri;
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.label_open_external_failed, Toast.LENGTH_LONG).show();
+            clearSharedUriGrant();
+        }
+    }
+
+    private Uri prepareSharedUri() {
+        if (TextUtils.isEmpty(mPath)) {
+            return null;
+        }
+        File source = new File(mPath);
+        if (!source.exists()) {
+            return null;
+        }
+        clearSharedUriGrant();
+        File cacheDir = new File(getCacheDir(), "shared_texts");
+        if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+            return null;
+        }
+        String name = source.getName();
+        String extension = "";
+        int dot = name.lastIndexOf('.');
+        if (dot >= 0) {
+            extension = name.substring(dot);
+        } else {
+            extension = ".txt";
+        }
+        File destination;
+        try {
+            destination = File.createTempFile("viewer_", extension, cacheDir);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to create cache file", e);
+            return null;
+        }
+        try {
+            copyFile(source, destination);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to copy file to cache", e);
+            destination.delete();
+            return null;
+        }
+        mSharedCacheFile = destination;
+        return FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", destination);
+    }
+
+    private void copyFile(File source, File destination) throws IOException {
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            in = new FileInputStream(source);
+            out = new FileOutputStream(destination);
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = in.read(buffer)) != -1) {
+                out.write(buffer, 0, length);
+            }
+            out.flush();
+        } finally {
+            closeQuietly(out);
+            closeQuietly(in);
+        }
+    }
+
+    private void clearSharedUriGrant() {
+        if (mGrantedUri != null) {
+            try {
+                revokeUriPermission(mGrantedUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } catch (Exception e) {
+                Log.w(TAG, "Unable to revoke uri permission", e);
+            }
+            mGrantedUri = null;
+        }
+        if (mSharedCacheFile != null && mSharedCacheFile.exists()) {
+            if (!mSharedCacheFile.delete()) {
+                Log.w(TAG, "Failed to delete shared cache file: " + mSharedCacheFile.getAbsolutePath());
+            }
+        }
+        mSharedCacheFile = null;
+    }
+
+    @Override
+    protected void onDestroy() {
+        clearSharedUriGrant();
+        super.onDestroy();
+    }
+
     @Override
     public boolean onItemLongClick(AdapterView<?> arg0, View arg1, int position, long arg3) {
-        // ビュワー呼び出し
-        Intent intent = new Intent();
-        intent.setAction(Intent.ACTION_VIEW);
+        Integer lineNumber = null;
         if ( mPrefs.addLineNumber ){
-//            TextPreview textPreview = (TextPreview)findViewById(R.id.TextPreview);
-            intent.setDataAndType(Uri.parse("file://" + mPath + "?line=" + (1+position) ), "text/plain");
-        }else{
-            intent.setDataAndType(Uri.parse("file://" + mPath), "text/plain");
+            lineNumber = position + 1;
         }
-        startActivity(intent);
+        launchExternalViewer(lineNumber);
         return true;
     }
     @Override

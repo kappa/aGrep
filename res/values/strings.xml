@@ -47,6 +47,7 @@
   <string name="summary_add_linenumber">If you open the file by Jota+/Jota Text Editor, automatically move the line.</string>
 
   <string name="label_copied">Copied to clipboard</string>
+  <string name="label_open_external_failed">Unable to open file in external app.</string>
   <string name="color_picker_input">Input Color code</string>
   <string name="color_picker_hint">Enter 6-digit hexadecimal</string>
 

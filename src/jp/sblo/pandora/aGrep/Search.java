@@ -378,6 +378,10 @@ public class Search extends Activity implements GrepView.Callback
     {
         SpannableString ss = new SpannableString(text);
 
+        if (p == null) {
+            return ss;
+        }
+
         int start = 0;
         int end;
         Matcher m = p.matcher( text );

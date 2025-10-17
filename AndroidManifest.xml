@@ -29,14 +29,16 @@
         <activity android:name=".TextViewer"
                   android:configChanges="keyboardHidden|orientation"
                   android:label="@string/app_name" >
-<!---
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="file" android:mimeType="text/plain" />
-            </intent-filter>
--->
         </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
         <activity android:name=".FileSelectorActivity"
                   android:configChanges="keyboardHidden|orientation"
                   android:label="@string/app_selector" >
