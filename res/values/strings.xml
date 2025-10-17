@@ -50,4 +50,12 @@
   <string name="color_picker_input">Input Color code</string>
   <string name="color_picker_hint">Enter 6-digit hexadecimal</string>
 
+  <string name="label_migrate_directories_title">Update directory access</string>
+  <string name="label_migrate_directories_message">aGrep now uses the system file picker. Please re-select your directories.</string>
+  <string name="label_migrate_directories_blocking">aGrep needs permission to your directories again. Open settings to re-select the folders you want to search.</string>
+  <string name="label_permission_denied">Storage permission denied. Please enable it in system settings to continue searching.</string>
+  <string name="label_manage_storage_title">Allow access to all files</string>
+  <string name="label_manage_storage_message">Android requires "All files access" to search every file on this device. Continue to the next screen to grant permission.</string>
+  <string name="label_open_settings">Open Settings</string>
+
 </resources>

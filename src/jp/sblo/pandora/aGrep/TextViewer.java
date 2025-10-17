@@ -3,7 +3,7 @@ package jp.sblo.pandora.aGrep;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 
 import org.mozilla.universalchardet.UniversalDetector;
 
-import android.app.ActionBar;
-import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -31,16 +29,22 @@ import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class TextViewer extends Activity implements OnItemLongClickListener , OnItemClickListener{
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class TextViewer extends AppCompatActivity implements OnItemLongClickListener , OnItemClickListener{
     public  static final String EXTRA_LINE = "line";
     public  static final String EXTRA_QUERY = "query";
     public  static final String EXTRA_PATH = "path";
+    public  static final String EXTRA_URI = "uri";
+    public  static final String EXTRA_DISPLAY_NAME = "display";
 
     private TextLoadTask mTask;
     private String mPatternText;
     private int mLine;
     private Prefs mPrefs;
-    private String mPath;
+    private Uri mUri;
+    private String mDisplayName;
     private TextPreview mTextPreview;
     ArrayList<CharSequence> mData = new ArrayList<CharSequence>();
 
@@ -49,9 +53,11 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.textviewer);
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         mPrefs = Prefs.loadPrefes(getApplicationContext());
         mTextPreview = (TextPreview)findViewById(R.id.TextPreview);
@@ -64,23 +70,46 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
 
             Bundle extra = it.getExtras();
             if ( extra!=null ){
-                mPath = extra.getString(EXTRA_PATH);
+                String uriString = extra.getString(EXTRA_URI);
+                if (uriString != null) {
+                    mUri = Uri.parse(uriString);
+                }
+                if (mUri == null) {
+                    String path = extra.getString(EXTRA_PATH);
+                    if (path != null) {
+                        if (path.startsWith("file://")) {
+                            mUri = Uri.parse(path);
+                        } else {
+                            mUri = Uri.fromFile(new File(path));
+                        }
+                        mDisplayName = path;
+                    }
+                }
+                mDisplayName = extra.getString(EXTRA_DISPLAY_NAME, mDisplayName);
                 mPatternText = extra.getString(EXTRA_QUERY);
                 mLine = extra.getInt(EXTRA_LINE);
+
+                if (mUri == null) {
+                    finish();
+                    return;
+                }
+                if (mDisplayName == null) {
+                    mDisplayName = mUri.getLastPathSegment();
+                }
 
                 if ( !mPrefs.mRegularExrpression ){
                     mPatternText = Search.escapeMetaChar(mPatternText);
                 }
 
-                setTitle( mPath + " - aGrep" );
+                setTitle( mDisplayName + " - aGrep" );
                 mTask = new TextLoadTask();
-                mTask.execute(mPath);
+                mTask.execute(mUri);
             }
 
         }
     }
 
-    class TextLoadTask extends AsyncTask<String, Integer, Boolean >{
+    class TextLoadTask extends AsyncTask<Uri, Integer, Boolean >{
         int mOffsetForLine=-1;
 
         @Override
@@ -89,14 +118,14 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
             super.onPreExecute();
         }
         @Override
-        protected Boolean doInBackground(String... params)
+        protected Boolean doInBackground(Uri... params)
         {
-            File f = new File(params[0]);
-            if ( f.exists() ){
+            Uri target = params[0];
+            if ( target != null ){
 
                 InputStream is;
                 try {
-                    is = new BufferedInputStream( new FileInputStream( f ) , 65536 );
+                    is = new BufferedInputStream( getContentResolver().openInputStream( target ) , 65536 );
                     is.mark(65536);
 
                     String encode = null;
@@ -110,6 +139,10 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
                                 detector.handleData(buff, 0, nread);
                             }
                             detector.dataEnd();
+                        }
+                        catch (FileNotFoundException e) {
+                            e.printStackTrace();
+                            return false;
                         }
                         catch (IOException e) {
                             e.printStackTrace();
@@ -142,6 +175,10 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                } catch (FileNotFoundException e1) {
+                    e1.printStackTrace();
+                } catch (SecurityException e1) {
+                    e1.printStackTrace();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
@@ -192,12 +229,16 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
             // ビュワー呼び出し
             Intent intent = new Intent();
             intent.setAction(Intent.ACTION_VIEW);
+            if (mUri == null) {
+                return true;
+            }
+            Uri viewUri = mUri;
             if ( mPrefs.addLineNumber ){
                 TextPreview textPreview = (TextPreview)findViewById(R.id.TextPreview);
-                intent.setDataAndType(Uri.parse("file://" + mPath + "?line=" + textPreview.getFirstVisiblePosition() ), "text/plain");
-            }else{
-                intent.setDataAndType(Uri.parse("file://" + mPath), "text/plain");
+                viewUri = buildViewerUri(textPreview.getFirstVisiblePosition());
             }
+            intent.setDataAndType(viewUri, "text/plain");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
             return true;
         }else if ( id == android.R.id.home ){
@@ -212,14 +253,30 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
         // ビュワー呼び出し
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_VIEW);
-        if ( mPrefs.addLineNumber ){
-//            TextPreview textPreview = (TextPreview)findViewById(R.id.TextPreview);
-            intent.setDataAndType(Uri.parse("file://" + mPath + "?line=" + (1+position) ), "text/plain");
-        }else{
-            intent.setDataAndType(Uri.parse("file://" + mPath), "text/plain");
+        if (mUri == null) {
+            return false;
         }
+        Uri viewUri = mUri;
+        if ( mPrefs.addLineNumber ){
+            viewUri = buildViewerUri(1+position);
+        }
+        intent.setDataAndType(viewUri, "text/plain");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         startActivity(intent);
         return true;
+    }
+
+    private Uri buildViewerUri(int line) {
+        if (mUri == null) {
+            return null;
+        }
+        if (line < 0) {
+            return mUri;
+        }
+        Uri.Builder builder = mUri.buildUpon();
+        builder.clearQuery();
+        builder.appendQueryParameter("line", String.valueOf(line));
+        return builder.build();
     }
     @Override
     public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {

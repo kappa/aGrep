@@ -7,10 +7,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.preference.PreferenceManager;
+import android.text.TextUtils;
 
 
 public class Prefs
@@ -21,12 +26,14 @@ public class Prefs
     public static final String KEY_TARGET_DIRECTORIES_OLD = "TargetDirectories";
     public static final String KEY_TARGET_EXTENSIONS_NEW = "TargetExtensionsNew";
     public static final String KEY_TARGET_DIRECTORIES_NEW = "TargetDirectoriesNew";
+    public static final String KEY_TARGET_DIRECTORIES_TREE = "TargetDirectoriesTree";
     public static final String KEY_FONTSIZE = "FontSize";
     public static final String KEY_HIGHLIGHTFG = "HighlightFg";
     public static final String KEY_HIGHLIGHTBG = "HighlightBg";
     public static final String KEY_ADD_LINENUMBER = "AddLineNumber";
 
     private static final String PREF_RECENT= "recent";
+    private static final String KEY_DIRECTORY_MIGRATION_PROMPTED = "DirectoryMigrationPrompted";
 
     boolean mRegularExrpression = false;
     boolean mIgnoreCase = true;
@@ -36,6 +43,9 @@ public class Prefs
     boolean addLineNumber=false;
     ArrayList<CheckedString> mDirList = new ArrayList<CheckedString>();
     ArrayList<CheckedString> mExtList = new ArrayList<CheckedString>();
+    ArrayList<String> mLegacyDirectories = new ArrayList<String>();
+    boolean needsDirectoryMigration = false;
+    boolean shouldPromptDirectoryMigration = false;
 
     static public Prefs loadPrefes(Context ctx)
     {
@@ -44,15 +54,56 @@ public class Prefs
         Prefs prefs = new Prefs();
 
         // target directory
+        prefs.loadDirectories(sp);
+
+        // target extensions
+        prefs.loadExtensions(sp);
+
+        prefs.mRegularExrpression = sp.getBoolean(KEY_REGULAR_EXPRESSION, false );
+        prefs.mIgnoreCase = sp.getBoolean(KEY_IGNORE_CASE, true );
+
+        try {
+            prefs.mFontSize = Integer.parseInt( sp.getString( KEY_FONTSIZE , "-1" ) );
+        } catch (NumberFormatException e) {
+            prefs.mFontSize = 16;
+        }
+        prefs.mHighlightFg = sp.getInt( KEY_HIGHLIGHTFG , 0xFF000000 );
+        prefs.mHighlightBg = sp.getInt( KEY_HIGHLIGHTBG , 0xFF00FFFF );
+
+        prefs.addLineNumber = sp.getBoolean(KEY_ADD_LINENUMBER, false);
+        return prefs;
+    }
+
+    private void loadDirectories(SharedPreferences sp) {
+        String dirsTree = sp.getString(KEY_TARGET_DIRECTORIES_TREE, null);
+        if (!TextUtils.isEmpty(dirsTree)) {
+            try {
+                JSONArray array = new JSONArray(dirsTree);
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject object = array.getJSONObject(i);
+                    boolean checked = object.optBoolean("checked", true);
+                    String uri = object.optString("uri", null);
+                    String name = object.optString("name", uri);
+                    mDirList.add(new CheckedString(checked, uri, name));
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (!mDirList.isEmpty()) {
+            return;
+        }
+
         String dirs = sp.getString(KEY_TARGET_DIRECTORIES_NEW,"" );
-        prefs.mDirList	=  new ArrayList<CheckedString>();
         if ( dirs.length()>0 ){
             String[] dirsarr = dirs.split("\\|");
             int size = dirsarr.length;
             for( int i=0;i<size;i+=2 ){
                 boolean c = dirsarr[i].equals("true");
-                String s = dirsarr[i+1];
-                prefs.mDirList.add(new CheckedString(c,s));
+                String legacyPath = dirsarr[i+1];
+                mDirList.add(new CheckedString(c,null,legacyPath));
+                mLegacyDirectories.add(legacyPath);
             }
         }else{
             dirs = sp.getString(KEY_TARGET_DIRECTORIES_OLD,"" );
@@ -60,20 +111,27 @@ public class Prefs
                 String[] dirsarr = dirs.split("\\|");
                 int size = dirsarr.length;
                 for( int i=0;i<size;i++ ){
-                    prefs.mDirList.add(new CheckedString(dirsarr[i]));
+                    String legacyPath = dirsarr[i];
+                    mDirList.add(new CheckedString(true,null,legacyPath));
+                    mLegacyDirectories.add(legacyPath);
                 }
             }
         }
-        // target extensions
+        if (!mLegacyDirectories.isEmpty()){
+            needsDirectoryMigration = true;
+            shouldPromptDirectoryMigration = !sp.getBoolean(KEY_DIRECTORY_MIGRATION_PROMPTED, false);
+        }
+    }
+
+    private void loadExtensions(SharedPreferences sp) {
         String exts = sp.getString(KEY_TARGET_EXTENSIONS_NEW,"" );
-        prefs.mExtList	=  new ArrayList<CheckedString>();
         if ( exts.length()>0 ){
             String[] arr = exts.split("\\|");
             int size = arr.length;
             for( int i=0;i<size;i+=2 ){
                 boolean c = arr[i].equals("true");
                 String s = arr[i+1];
-                prefs.mExtList.add(new CheckedString(c,s));
+                mExtList.add(new CheckedString(c,s));
             }
         }else{
             exts = sp.getString(KEY_TARGET_EXTENSIONS_OLD,"txt" );
@@ -81,20 +139,30 @@ public class Prefs
                 String[] arr = exts.split("\\|");
                 int size = arr.length;
                 for( int i=0;i<size;i++ ){
-                    prefs.mExtList.add(new CheckedString(arr[i]));
+                    mExtList.add(new CheckedString(arr[i]));
                 }
             }
         }
+    }
 
-        prefs.mRegularExrpression = sp.getBoolean(KEY_REGULAR_EXPRESSION, false );
-        prefs.mIgnoreCase = sp.getBoolean(KEY_IGNORE_CASE, true );
+    public void clearLegacyDirectories() {
+        ArrayList<CheckedString> cleaned = new ArrayList<CheckedString>();
+        for (CheckedString dir : mDirList) {
+            if (dir.hasValue()) {
+                cleaned.add(dir);
+            }
+        }
+        mDirList = cleaned;
+        mLegacyDirectories.clear();
+        needsDirectoryMigration = false;
+    }
 
-        prefs.mFontSize = Integer.parseInt( sp.getString( KEY_FONTSIZE , "-1" ) );
-        prefs.mHighlightFg = sp.getInt( KEY_HIGHLIGHTFG , 0xFF000000 );
-        prefs.mHighlightBg = sp.getInt( KEY_HIGHLIGHTBG , 0xFF00FFFF );
-
-        prefs.addLineNumber = sp.getBoolean(KEY_ADD_LINENUMBER, false);
-        return prefs;
+    public void markMigrationPrompted(Context context) {
+        final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
+        Editor editor = sp.edit();
+        editor.putBoolean(KEY_DIRECTORY_MIGRATION_PROMPTED, true);
+        editor.apply();
+        shouldPromptDirectoryMigration = false;
     }
 
     public void savePrefs(Context context)
@@ -104,15 +172,20 @@ public class Prefs
         Editor editor = sp.edit();
 
         // target directory
-        StringBuilder dirs = new StringBuilder();
+        JSONArray dirArray = new JSONArray();
         for( CheckedString t : mDirList ){
-            dirs.append(t.checked);
-            dirs.append('|');
-            dirs.append(t.string);
-            dirs.append('|');
-        }
-        if ( dirs.length() > 0 ){
-            dirs.deleteCharAt(dirs.length()-1);
+            if (!t.hasValue()) {
+                continue;
+            }
+            JSONObject object = new JSONObject();
+            try {
+                object.put("checked", t.checked);
+                object.put("uri", t.string);
+                object.put("name", t.getDisplayName());
+                dirArray.put(object);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
 
         // target extensions
@@ -127,10 +200,19 @@ public class Prefs
             exts.deleteCharAt(exts.length()-1);
         }
 
-        editor.putString(KEY_TARGET_DIRECTORIES_NEW, dirs.toString() );
+        if (dirArray.length() > 0) {
+            editor.putString(KEY_TARGET_DIRECTORIES_TREE, dirArray.toString() );
+            editor.putBoolean(KEY_DIRECTORY_MIGRATION_PROMPTED, true);
+            needsDirectoryMigration = false;
+            shouldPromptDirectoryMigration = false;
+        } else {
+            editor.remove(KEY_TARGET_DIRECTORIES_TREE);
+        }
+
         editor.putString(KEY_TARGET_EXTENSIONS_NEW, exts.toString() );
         editor.remove(KEY_TARGET_DIRECTORIES_OLD);
         editor.remove(KEY_TARGET_EXTENSIONS_OLD);
+        editor.remove(KEY_TARGET_DIRECTORIES_NEW);
         editor.putBoolean(KEY_REGULAR_EXPRESSION, mRegularExrpression );
         editor.putBoolean(KEY_IGNORE_CASE, mIgnoreCase );
 

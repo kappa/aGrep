@@ -1,12 +1,12 @@
 package jp.sblo.pandora.aGrep;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.net.Uri;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -18,26 +18,30 @@ import android.widget.TextView;
 
 public class GrepView extends ListView {
 
-    static	class Data implements Comparator<Data> {
+    static class Data implements Comparator<Data> {
 
-        public File mFile ;
-        public int 	mLinenumber ;
-        public CharSequence 	mText;
+        public Uri mUri;
+        public String mDisplayName;
+        public int mLinenumber;
+        public CharSequence mText;
 
         public Data(){
-            this( null , 0 , null );
+            this(null, null, 0, null);
         }
 
-        public  Data( File file , int linenumber , CharSequence text ){
-            mFile = file;
+        public Data(Uri uri, String displayName, int linenumber, CharSequence text){
+            mUri = uri;
+            mDisplayName = displayName;
             mLinenumber = linenumber;
             mText = text;
         }
 
         @Override
         public int compare(Data object1, Data object2) {
-            int ret = object1.mFile.getName().compareToIgnoreCase(object2.mFile.getName());
-            if ( ret == 0 ){
+            String name1 = object1.mDisplayName != null ? object1.mDisplayName : "";
+            String name2 = object2.mDisplayName != null ? object2.mDisplayName : "";
+            int ret = name1.compareToIgnoreCase(name2);
+            if (ret == 0) {
                 ret = object1.mLinenumber - object2.mLinenumber;
             }
             return ret;
@@ -119,7 +123,7 @@ public class GrepView extends ListView {
         private int mFontSize;
 
 
-        static	class ViewHolder {
+        static  class ViewHolder {
             TextView Index;
             TextView kwic;
         }
@@ -156,7 +160,8 @@ public class GrepView extends ListView {
             }
             Data d = getItem(position);
 
-            String fname = d.mFile.getName() + "(" + d.mLinenumber + ")";
+            String baseName = d.mDisplayName != null ? d.mDisplayName : "";
+            String fname = baseName + "(" + d.mLinenumber + ")";
             holder.Index.setText(fname);
             holder.kwic.setText( Search.highlightKeyword(d.mText, mPattern, mFgColor , mBgColor ) );
 
