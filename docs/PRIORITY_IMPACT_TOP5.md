@@ -55,7 +55,23 @@ This list prioritizes tasks based purely on their impact to users, regardless of
 - **Blocks confident optimization work** - can't know what actually helps
 - Every claimed optimization needs before/after proof
 
-**What to Measure**:
+**Implementation Plan**:
+See `docs/SAF_SEARCH_PERFORMANCE_PLAN.md` for comprehensive methodology.
+
+The plan defines 5 workstreams:
+1. **Reproducible SAF Benchmark Harness** - Deterministic test corpus, instrumented tests
+2. **Pipeline Instrumentation & Tracing** - Perfetto traces, per-stage timing
+3. **Microbenchmarks for Hotspots** - UniversalDetector, extension matching, pattern scanning
+4. **Flagged Optimization Prototypes** - Safe A/B testing of optimizations
+5. **Automated Regression Detection** - CI integration, baseline comparison
+
+**Implementation Order**:
+1. Start with **Workstream 1** (benchmark harness) - provides measurement capability
+2. Add **Workstream 2** (instrumentation) - identifies actual bottlenecks
+3. Run **Workstream 3** (microbenchmarks) - validates specific optimization claims
+4. Only then implement optimizations from `PERFORMANCE_OPTIMIZATIONS.md` using **Workstream 4**
+
+**What to Measure** (from SAF plan):
 1. **Time to first result** (user-perceived responsiveness)
 2. **Total search time** (overall performance)
 3. **Files processed per second** (throughput)
@@ -63,25 +79,21 @@ This list prioritizes tasks based purely on their impact to users, regardless of
 5. **SAF IPC overhead** (DocumentFile vs File comparison)
 6. **Memory usage** (peak and average during search)
 
-**Benchmark Suite Requirements**:
-- Reproducible test corpus (known directory structure, file sizes, content)
-- Automated benchmark runs (can integrate into CI)
-- Statistical validity (multiple runs, median/p95 metrics)
-- Before/after comparison reports
-- Breakdown by operation (traversal, encoding, matching, UI updates)
-
 **Output**:
 - Baseline performance metrics for current implementation
 - Identify actual bottlenecks (not theoretical ones)
-- Validate or refute optimization claims from PERFORMANCE_OPTIMIZATIONS.md
+- Validate or refute optimization claims from `PERFORMANCE_OPTIMIZATIONS.md`
 - Guide prioritization of performance work
+- CI-integrated regression detection
 
-**Files to Create**:
-- `app/src/androidTest/java/jp/sblo/pandora/aGrep/PerformanceBenchmarkTest.java`
+**Files to Create** (per SAF plan):
+- `app/src/androidTest/java/jp/sblo/pandora/aGrep/perf/ExecutorGrepEngineBenchmarkTest.java`
+- `app/src/androidTest/java/jp/sblo/pandora/aGrep/perf/UniversalDetectorBenchmark.java`
+- `app/src/main/java/jp/sblo/pandora/aGrep/SearchMetrics.java`
 - `docs/PERFORMANCE_BASELINE.md` (baseline results)
 - `docs/BENCHMARK_METHODOLOGY.md` (how to run benchmarks)
 
-**Estimated Effort**: 🔨🔨🔨 (2-4 hours)
+**Estimated Effort**: 🔨🔨🔨 (2-4 hours for Workstream 1, then 2-3 hours per additional workstream)
 
 ---
 
@@ -269,9 +281,13 @@ The **known performance regression** from SAF migration proves that:
 - **Still worth**: Simple hints like "Long-press to select" cost little
 
 ### Performance Optimizations (UniversalDetector cache, encoding skip, etc.)
-- `PERFORMANCE_OPTIMIZATIONS.md` - Various optimization ideas
+- `PERFORMANCE_OPTIMIZATIONS.md` - Various optimization ideas with **unvalidated** impact claims
 - **Impact**: Unknown until measured (that's why benchmarking is #2)
-- All performance work should wait for benchmark infrastructure
+- All performance work should follow `SAF_SEARCH_PERFORMANCE_PLAN.md` methodology:
+  1. Implement Workstream 1-2 (benchmarking + instrumentation) FIRST
+  2. Measure hotspots with Workstream 3 (microbenchmarks)
+  3. Validate claimed improvements (10-15%, 15-20% are guesses)
+  4. Only then implement proven optimizations using Workstream 4 (feature flags)
 
 ### Lint Warnings
 - `LINT_WARNINGS_PLAN.md` - 39 warnings, 5 high-priority fixes

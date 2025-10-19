@@ -808,24 +808,36 @@ if (child.isDirectory()) {
 
 These have high impact but require significant effort (not "easy wins"):
 
-### Major Features (Move to Separate Roadmap)
-- **Performance Benchmarking** (Impact: ⭐⭐⭐⭐⭐, Effort: 🔨🔨🔨) - Critical but medium effort
-- **Test Coverage Phase 1** (Impact: ⭐⭐⭐⭐⭐, Effort: 🔨🔨🔨) - Critical but medium effort
+### Major Features (See PRIORITY_IMPACT_TOP5.md)
+- **Performance Benchmarking** (Impact: ⭐⭐⭐⭐⭐, Effort: 🔨🔨🔨) - Critical, see `SAF_SEARCH_PERFORMANCE_PLAN.md`
+- **Test Coverage Phase 1** (Impact: ⭐⭐⭐⭐⭐, Effort: 🔨🔨🔨) - Critical, see `TEST_COVERAGE_PLAN.md`
 - **File Size Limit Fix** (Impact: ⭐⭐⭐⭐⭐, Effort: 🔨🔨🔨) - Investigation + fix
-- **Find & Replace** (Impact: ⭐⭐, Effort: 🔨🔨🔨🔨🔨) - **ICEBOX** - out of core scope
+
+### Out of Core Scope (See LONG_PROJECTS.md)
+- **Find & Replace** (Impact: ⭐⭐, Effort: 🔨🔨🔨🔨🔨) - **Paid version candidate** - out of core scope
 - **Widget Support** (Impact: ⭐, Effort: 🔨🔨🔨🔨) - **WONTFIX** - out of scope
-- **Fuzzy Search** (Impact: ⭐⭐⭐, Effort: 🔨🔨🔨🔨) - **RESEARCH** - interesting but high effort
+- **Network/NAS Storage** (Impact: ⭐⭐⭐⭐ if needed, Effort: 🔨🔨🔨🔨🔨) - **Paid version candidate** - test first
+- **Fuzzy Search** (Impact: ⭐⭐⭐, Effort: 🔨🔨🔨🔨) - **Research project** - interesting but high effort
 
 ### Low Impact
 - **First-Run Tutorial** (Impact: ⭐⭐, Effort: 🔨🔨🔨) - No new users expected
 - **UI Hints** (Impact: ⭐⭐, Effort: 🔨) - Technical users can figure it out
 - **ColorPicker Modernization** (Impact: ⭐, Effort: 🔨🔨) - Works fine as-is
 
-### Wait for Benchmarking
-All performance optimizations should wait until benchmarking infrastructure exists:
-- UniversalDetector cache (claimed 10-15% but unvalidated)
-- HashSet extension matching (Impact: ⭐⭐ - tiny benefit)
-- Encoding detection skip (Impact: ⭐⭐⭐ but needs measurement)
+### Wait for Benchmarking (Follow SAF_SEARCH_PERFORMANCE_PLAN.md)
+All performance optimizations must follow the SAF performance plan methodology:
+
+1. **First**: Implement measurement infrastructure (Workstream 1-2)
+2. **Second**: Run microbenchmarks to validate claims (Workstream 3)
+3. **Third**: Prototype with feature flags (Workstream 4)
+4. **Finally**: Enable proven optimizations
+
+Current `PERFORMANCE_OPTIMIZATIONS.md` claims are **unvalidated guesses**:
+- UniversalDetector cache (claimed 10-15% - needs validation)
+- HashSet extension matching (claimed 3-5% - likely tiny/negligible)
+- Encoding detection skip (claimed 15-20% - seems exaggerated)
+
+**Don't implement these until measured!** See `SAF_SEARCH_PERFORMANCE_PLAN.md` for scientific approach.
 
 ---
 

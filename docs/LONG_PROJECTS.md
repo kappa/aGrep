@@ -234,6 +234,8 @@ Features that are technically interesting and valuable but require significant R
 **Effort**: 🔨🔨🔨🔨 (10-15 hours for comprehensive analysis)
 **Status**: **IMPORTANT** - Should be done for free version quality
 
+**Implementation Plan**: See `docs/SAF_SEARCH_PERFORMANCE_PLAN.md` for detailed methodology
+
 **What**: Systematic performance analysis and optimization
 
 **Phase 1: Measurement Infrastructure** (Already in Top 5 Impact)
