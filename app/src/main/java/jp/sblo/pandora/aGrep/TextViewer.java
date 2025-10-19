@@ -222,7 +222,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
 
     }
     @Override
-    public boolean onMenuItemSelected(int featureId, MenuItem item)
+    public boolean onOptionsItemSelected(MenuItem item)
     {
         int id = item.getItemId();
         if (id == R.id.menu_viewer) {
@@ -241,11 +241,12 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(intent);
             return true;
-        }else if ( id == android.R.id.home ){
+        }
+        if (id == android.R.id.home) {
             finish();
             return true;
         }
-        return super.onMenuItemSelected(featureId, item);
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
