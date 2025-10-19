@@ -46,6 +46,17 @@
   <string name="label_add_linenumber">Send Intent with line number</string>
   <string name="summary_add_linenumber">If you open the file by Jota+/Jota Text Editor, automatically move the line.</string>
 
+  <string name="summary_color_value">Current color: %1$s</string>
+  <string name="toolbar_navigation_cd">Navigate back</string>
+  <string name="content_desc_history">Show recent searches</string>
+  <string name="content_desc_search">Start search</string>
+  <string name="content_desc_clear">Clear search query</string>
+  <string name="content_desc_add_directory">Add directory</string>
+  <string name="content_desc_add_extension">Add extension</string>
+  <string name="label_history">History</string>
+  <string name="label_search">Search</string>
+  <string name="label_clear">Clear</string>
+
   <string name="label_copied">Copied to clipboard</string>
   <string name="label_open_external_failed">Unable to open file in external app.</string>
   <string name="color_picker_input">Input Color code</string>

@@ -1,117 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    >
-
-<LinearLayout
-    android:orientation="vertical"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    >
-  <LinearLayout android:id="@+id/LinearLayout01"
-    android:orientation="horizontal"
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content">
-    <ImageButton
-      android:layout_width="wrap_content"
-      android:src="@drawable/history"
-      android:layout_height="fill_parent"
-      android:id="@+id/ButtonHistory"
-    />
-    <AutoCompleteTextView
-      android:id="@+id/EditText01"
-      android:layout_width="0dip"
-      android:capitalize="none"
-      android:layout_weight="1"
-      android:layout_height="fill_parent"
-      android:singleLine="true"
-      android:hint="@string/label_hint"
-      android:completionThreshold="1"
-      android:imeOptions="flagNoExtractUi|actionSearch"
-    />
-    <ImageButton
-      android:layout_width="wrap_content"
-      android:src="@drawable/search"
-      android:layout_height="fill_parent"
-      android:id="@+id/ButtonSearch"
-    />
-    <ImageButton
-      android:layout_width="wrap_content"
-      android:src="@drawable/clr"
-      android:layout_height="fill_parent"
-      android:id="@+id/ButtonClear"
-    />
-  </LinearLayout>
-
-  <LinearLayout
-    android:orientation="horizontal"
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content">
-    <ImageButton
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:src="@drawable/add"
-      android:id="@+id/adddir"
-    />
-    <TextView
-        android:layout_width="0dip"
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/topAppBar"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:layout_gravity="left|center_vertical"
-        android:textSize="20sp"
-        android:text="@string/label_dir"
-        />
-  </LinearLayout>
-  <LinearLayout
-    android:id="@+id/listdir"
-    android:paddingLeft = "20dp"
-    android:layout_width = "fill_parent"
-    android:layout_height = "wrap_content"
-     android:orientation="vertical"
-  />
+        app:navigationContentDescription="@string/toolbar_navigation_cd"
+        app:title="@string/app_name" />
 
-  <LinearLayout
-    android:orientation="horizontal"
-    android:layout_width="fill_parent"
-    android:layout_height="wrap_content">
-    <ImageButton
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:src="@drawable/add"
-      android:id="@+id/addext"
-    />
-    <TextView
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-      android:layout_weight="1"
-      android:layout_gravity="left|center_vertical"
-      android:textSize="20dp"
-        android:text="@string/label_ext"
-        />
-  </LinearLayout>
-  <LinearLayout
-    android:id="@+id/listext"
-     android:orientation="vertical"
-    android:paddingLeft = "20dp"
-    android:layout_width = "fill_parent"
-    android:layout_height = "wrap_content"
-  />
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/settings_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="?attr/actionBarSize"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-  <CheckBox
-    android:id="@+id/checkre"
-    android:text="@string/label_re"
-    android:layout_width="fill_parent"
-    android:layout_height = "wrap_content"
-  />
-  <CheckBox
-    android:id="@+id/checkignorecase"
-    android:text="@string/label_ignore_case"
-    android:layout_width="fill_parent"
-    android:layout_height = "wrap_content"
-  />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/content_padding">
 
-</LinearLayout>
-</ScrollView>
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/query_input_layout"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/label_hint"
+                app:boxBackgroundMode="outline">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/query_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:completionThreshold="1"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:orientation="horizontal"
+                android:paddingTop="@dimen/spacing_small">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_history"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/spacing_small"
+                    android:contentDescription="@string/content_desc_history"
+                    android:minHeight="48dp"
+                    app:icon="@drawable/history"
+                    app:iconGravity="textStart"
+                    app:iconPadding="@dimen/spacing_small"
+                    app:iconTint="?attr/colorOnSurface"
+                    android:text="@string/label_history" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_search"
+                    style="@style/Widget.MaterialComponents.Button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/spacing_small"
+                    android:contentDescription="@string/content_desc_search"
+                    android:minHeight="48dp"
+                    app:icon="@drawable/search"
+                    app:iconGravity="textStart"
+                    app:iconPadding="@dimen/spacing_small"
+                    app:iconTint="?attr/colorOnPrimary"
+                    android:text="@string/label_search" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_clear"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton.Icon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/content_desc_clear"
+                    android:minHeight="48dp"
+                    app:icon="@drawable/clr"
+                    app:iconGravity="textStart"
+                    app:iconPadding="@dimen/spacing_small"
+                    app:iconTint="?attr/colorOnSurface"
+                    android:text="@string/label_clear" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/label_directories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_large"
+                android:text="@string/label_dir"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/adddir"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:contentDescription="@string/content_desc_add_directory"
+                android:minHeight="48dp"
+                app:icon="@drawable/add"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/spacing_small"
+                app:iconTint="?attr/colorOnPrimary"
+                android:text="@string/label_adddir" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/directory_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:nestedScrollingEnabled="false" />
+
+            <TextView
+                android:id="@+id/label_extensions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_large"
+                android:text="@string/label_ext"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/addext"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:contentDescription="@string/content_desc_add_extension"
+                android:minHeight="48dp"
+                app:icon="@drawable/add"
+                app:iconGravity="textStart"
+                app:iconPadding="@dimen/spacing_small"
+                app:iconTint="?attr/colorOnPrimary"
+                android:text="@string/label_addext" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/extension_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:nestedScrollingEnabled="false" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/checkre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_large"
+                android:minHeight="48dp"
+                android:text="@string/label_re" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/checkignorecase"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_small"
+                android:minHeight="48dp"
+                android:text="@string/label_ignore_case" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

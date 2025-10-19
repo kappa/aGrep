@@ -18,8 +18,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 
 public class ColorPickerActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -50,7 +52,6 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
 
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
-            actionBar.setHomeButtonEnabled(true);
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
@@ -137,7 +138,7 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
                         }
                     },
                 });
-                new AlertDialog.Builder(this)
+                new MaterialAlertDialogBuilder(this)
                 .setIcon(R.drawable.icon)
                 .setTitle(R.string.color_picker_input)
                 .setView(edtInput)

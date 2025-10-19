@@ -1,152 +1,193 @@
 package jp.sblo.pandora.aGrep;
 
-import android.app.ActionBar;
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.net.Uri;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.preference.CheckBoxPreference;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.PreferenceActivity;
-import android.preference.PreferenceManager;
-import android.preference.PreferenceScreen;
+import android.net.Uri;
 import android.view.MenuItem;
 
-public class OptionActivity extends PreferenceActivity  {
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.preference.ListPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
+import androidx.preference.SwitchPreferenceCompat;
 
+/**
+ * Hosts application options backed by {@link androidx.preference.PreferenceFragmentCompat}.
+ */
+public class OptionActivity extends AppCompatActivity {
 
-    final public static int DefaultHighlightColor=0xFF00FFFF;
-
-    private PreferenceScreen mPs = null;
-    private PreferenceManager mPm;
-    private Prefs  mPrefs;
-
-    final private static int REQUEST_CODE_HIGHLIGHT = 0x1000;
-    final private static int REQUEST_CODE_BACKGROUND = 0x1001;
-
-    @SuppressWarnings("deprecation")
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        setContentView(R.layout.activity_option);
 
-        mPrefs = Prefs.loadPrefes(this);
+        final Toolbar toolbar = findViewById(R.id.option_toolbar);
+        setSupportActionBar(toolbar);
 
-        mPm = getPreferenceManager();
-        mPs = mPm.createPreferenceScreen(this);
-
-        final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-
-        {
-            final Preference pr = new Preference(this);
-            // set Version Name to title field
-            try {
-                pr.setTitle(getString(R.string.version, getPackageManager()
-                        .getPackageInfo(getPackageName(), 0).versionName));
-            } catch (NameNotFoundException e) {
-            }
-            pr.setSummary(R.string.link);
-            pr.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-                @Override
-                public boolean onPreferenceClick(Preference preference){
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setData(Uri.parse("market://details?id=jp.sblo.pandora.aGrep"));
-                    startActivity(intent);
-                    return true;
-                }
-            });
-            mPs.addPreference(pr);
-        }
-        {
-            // フォントサイズ
-            final ListPreference pr = new ListPreference(this);
-            pr.setKey(Prefs.KEY_FONTSIZE);
-            pr.setSummary(sp.getString(pr.getKey(), ""));
-            pr.setTitle(R.string.label_font_size);
-            pr.setEntries(new String[] { "10", "14", "16", "18", "20", "24", "30", "36",  });
-            pr.setEntryValues(new String[] { "10", "14", "16", "18", "20", "24", "30", "36",  });
-            mPs.addPreference(pr);
-        }
-        createHighlightPreference( R.string.label_highlight_bg , REQUEST_CODE_HIGHLIGHT );
-        createHighlightPreference( R.string.label_highlight_fg , REQUEST_CODE_BACKGROUND );
-
-        {
-            // Add Linenumber
-            final CheckBoxPreference pr = new CheckBoxPreference(this);
-            pr.setKey(Prefs.KEY_ADD_LINENUMBER);
-            pr.setSummary(R.string.summary_add_linenumber);
-            pr.setTitle(R.string.label_add_linenumber);
-            mPs.addPreference(pr);
+        final ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        {
-            final Preference pr = new Preference(this);
-            pr.setTitle(R.string.icondesign);
-            pr.setSummary(R.string.iconsite);
-            pr.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-                @Override
-                public boolean onPreferenceClick(Preference preference){
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.setData(Uri.parse(getString(R.string.iconlink)));
-                    startActivity(intent);
-                    return true;
-                }
-            });
-            mPs.addPreference(pr);
-        }
-        setPreferenceScreen(mPs);
-
-    }
-
-
-    private void createHighlightPreference( final int resid , final int reqCode )
-    {
-        final Preference pr = new Preference(this);
-        pr.setTitle(resid);
-
-        pr.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-            @Override
-            public boolean onPreferenceClick(Preference preference)
-            {
-                Intent intent = new Intent( OptionActivity.this , ColorPickerActivity.class );
-                intent.putExtra(ColorPickerActivity.EXTRA_TITLE, getString(resid));
-                startActivityForResult(intent, reqCode);
-                return true;
-            }
-        });
-
-        mPs.addPreference(pr);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if ( resultCode == RESULT_OK ){
-            int color = data.getIntExtra(ColorPickerActivity.EXTRA_COLOR, 0x00FFFF);
-            if ( requestCode == REQUEST_CODE_HIGHLIGHT ){
-                mPrefs.mHighlightFg = color;
-            }else if ( requestCode == REQUEST_CODE_BACKGROUND ){
-                mPrefs.mHighlightBg = color;
-            }
-            final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-            sp.edit()
-            .putInt(Prefs.KEY_HIGHLIGHTFG, mPrefs.mHighlightFg)
-            .putInt(Prefs.KEY_HIGHLIGHTBG, mPrefs.mHighlightBg)
-            .apply();
+        if (savedInstanceState == null) {
+            getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.settings_container, new OptionFragment())
+                    .commit();
         }
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        switch (id) {
-            case android.R.id.home:
-                finish();
-                return true;
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            finish();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
+
+    public static class OptionFragment extends PreferenceFragmentCompat {
+
+        private static final String KEY_VERSION = "pref_version";
+        private static final String KEY_COLOR_FOREGROUND = Prefs.KEY_HIGHLIGHTFG;
+        private static final String KEY_COLOR_BACKGROUND = Prefs.KEY_HIGHLIGHTBG;
+
+        private ActivityResultLauncher<Intent> colorPickerLauncher;
+        private String pendingColorPreferenceKey;
+
+        @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            setPreferencesFromResource(R.xml.preferences_options, rootKey);
+
+            final Context context = requireContext();
+            colorPickerLauncher = registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    this::handleColorPickerResult);
+            bindVersionPreference(context);
+            bindFontSizePreference();
+            bindHighlightPreference(KEY_COLOR_BACKGROUND, R.string.label_highlight_bg);
+            bindHighlightPreference(KEY_COLOR_FOREGROUND, R.string.label_highlight_fg);
+            bindAddLineNumberPreference();
+            bindIconCreditPreference();
+        }
+
+        private void bindVersionPreference(Context context) {
+            final Preference preference = findPreference(KEY_VERSION);
+            if (preference == null) {
+                return;
+            }
+
+            try {
+                final String versionName = context.getPackageManager()
+                        .getPackageInfo(context.getPackageName(), 0)
+                        .versionName;
+                preference.setTitle(getString(R.string.version, versionName));
+            } catch (PackageManager.NameNotFoundException e) {
+                preference.setVisible(false);
+                return;
+            }
+
+            preference.setSummary(R.string.link);
+            preference.setOnPreferenceClickListener(pref -> {
+                final Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse("market://details?id=jp.sblo.pandora.aGrep"));
+                startActivity(intent);
+                return true;
+            });
+        }
+
+        private void bindFontSizePreference() {
+            final ListPreference preference = findPreference(Prefs.KEY_FONTSIZE);
+            if (preference == null) {
+                return;
+            }
+            preference.setSummaryProvider(ListPreference.SimpleSummaryProvider.getInstance());
+        }
+
+        private void bindHighlightPreference(String key, int titleResId) {
+            final Preference preference = findPreference(key);
+            if (preference == null) {
+                return;
+            }
+            preference.setTitle(titleResId);
+            updateColorSummary(preference, key);
+            preference.setOnPreferenceClickListener(pref -> {
+                pendingColorPreferenceKey = key;
+                final Intent intent = new Intent(requireContext(), ColorPickerActivity.class);
+                intent.putExtra(ColorPickerActivity.EXTRA_TITLE, pref.getTitle());
+                colorPickerLauncher.launch(intent);
+                return true;
+            });
+        }
+
+        private void bindAddLineNumberPreference() {
+            final SwitchPreferenceCompat preference = findPreference(Prefs.KEY_ADD_LINENUMBER);
+            if (preference == null) {
+                return;
+            }
+            preference.setSummary(R.string.summary_add_linenumber);
+        }
+
+        private void bindIconCreditPreference() {
+            final Preference preference = findPreference("pref_icon_credit");
+            if (preference == null) {
+                return;
+            }
+            preference.setOnPreferenceClickListener(pref -> {
+                final Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse(getString(R.string.iconlink)));
+                startActivity(intent);
+                return true;
+            });
+        }
+
+        private void handleColorPickerResult(ActivityResult result) {
+            if (result.getResultCode() != Activity.RESULT_OK || pendingColorPreferenceKey == null) {
+                pendingColorPreferenceKey = null;
+                return;
+            }
+            final Intent data = result.getData();
+            if (data == null) {
+                pendingColorPreferenceKey = null;
+                return;
+            }
+            final int fallbackColor = Prefs.KEY_HIGHLIGHTFG.equals(pendingColorPreferenceKey)
+                    ? 0xFF000000
+                    : OptionActivity.DefaultHighlightColor;
+            final int color = data.getIntExtra(ColorPickerActivity.EXTRA_COLOR, fallbackColor);
+            final SharedPreferences sharedPreferences = PreferenceManager
+                    .getDefaultSharedPreferences(requireContext());
+            sharedPreferences.edit().putInt(pendingColorPreferenceKey, color).apply();
+
+            final Preference preference = findPreference(pendingColorPreferenceKey);
+            if (preference != null) {
+                updateColorSummary(preference, pendingColorPreferenceKey);
+            }
+            pendingColorPreferenceKey = null;
+        }
+
+        private void updateColorSummary(@NonNull Preference preference, @NonNull String key) {
+            final SharedPreferences sharedPreferences = PreferenceManager
+                    .getDefaultSharedPreferences(requireContext());
+            final int color = sharedPreferences.getInt(key,
+                    key.equals(Prefs.KEY_HIGHLIGHTFG) ? 0xFF000000 : OptionActivity.DefaultHighlightColor);
+            final String summary = getString(R.string.summary_color_value,
+                    String.format("#%08X", color));
+            preference.setSummary(summary);
+        }
+    }
+
+    static final int DefaultHighlightColor = 0xFF00FFFF;
 }
