@@ -3,29 +3,29 @@ plugins {
 }
 
 android {
-    namespace 'jp.sblo.pandora.aGrep'
-    compileSdk 34
+    namespace = 'jp.sblo.pandora.aGrep'
+    compileSdk = 34
 
     defaultConfig {
-        applicationId 'jp.sblo.pandora.aGrep'
-        minSdk 21
-        targetSdk 34
-        versionCode 201403
-        versionName '2014.03'
+        applicationId = 'jp.sblo.pandora.aGrep'
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 201403
+        versionName = '2014.03'
 
-        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     lint {
