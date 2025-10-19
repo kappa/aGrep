@@ -14,7 +14,7 @@ public class SearchViewModel extends ViewModel {
     private GrepEngine grepEngine;
 
     public SearchViewModel() {
-        this.uiState = new MutableLiveData<SearchUiState>(SearchUiState.idle());
+        this.uiState = new MutableLiveData<>(SearchUiState.idle());
     }
 
     public LiveData<SearchUiState> getUiState() {

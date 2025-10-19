@@ -2,7 +2,6 @@ package jp.sblo.pandora.aGrep;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,19 +34,19 @@ public class Prefs
     private static final String PREF_RECENT= "recent";
     private static final String KEY_DIRECTORY_MIGRATION_PROMPTED = "DirectoryMigrationPrompted";
 
-    boolean mRegularExrpression = false;
+    boolean mRegularExpression = false;
     boolean mIgnoreCase = true;
     int mFontSize = 16;
     int mHighlightBg = 0xFF00FFFF;
     int mHighlightFg = 0xFF000000;
     boolean addLineNumber=false;
-    ArrayList<CheckedString> mDirList = new ArrayList<CheckedString>();
-    ArrayList<CheckedString> mExtList = new ArrayList<CheckedString>();
-    ArrayList<String> mLegacyDirectories = new ArrayList<String>();
+    ArrayList<CheckedString> mDirList = new ArrayList<>();
+    ArrayList<CheckedString> mExtList = new ArrayList<>();
+    ArrayList<String> mLegacyDirectories = new ArrayList<>();
     boolean needsDirectoryMigration = false;
     boolean shouldPromptDirectoryMigration = false;
 
-    static public Prefs loadPrefes(Context ctx)
+    static public Prefs loadPrefs(Context ctx)
     {
         final SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(ctx);
 
@@ -59,7 +58,7 @@ public class Prefs
         // target extensions
         prefs.loadExtensions(sp);
 
-        prefs.mRegularExrpression = sp.getBoolean(KEY_REGULAR_EXPRESSION, false );
+        prefs.mRegularExpression = sp.getBoolean(KEY_REGULAR_EXPRESSION, false );
         prefs.mIgnoreCase = sp.getBoolean(KEY_IGNORE_CASE, true );
 
         try {
@@ -96,7 +95,7 @@ public class Prefs
         }
 
         String dirs = sp.getString(KEY_TARGET_DIRECTORIES_NEW,"" );
-        if ( dirs.length()>0 ){
+        if (!dirs.isEmpty()){
             String[] dirsarr = dirs.split("\\|");
             int size = dirsarr.length;
             for( int i=0;i<size;i+=2 ){
@@ -107,12 +106,10 @@ public class Prefs
             }
         }else{
             dirs = sp.getString(KEY_TARGET_DIRECTORIES_OLD,"" );
-            if ( dirs.length()>0 ){
+            if (!dirs.isEmpty()){
                 String[] dirsarr = dirs.split("\\|");
-                int size = dirsarr.length;
-                for( int i=0;i<size;i++ ){
-                    String legacyPath = dirsarr[i];
-                    mDirList.add(new CheckedString(true,null,legacyPath));
+                for (String legacyPath : dirsarr) {
+                    mDirList.add(new CheckedString(true, null, legacyPath));
                     mLegacyDirectories.add(legacyPath);
                 }
             }
@@ -125,7 +122,7 @@ public class Prefs
 
     private void loadExtensions(SharedPreferences sp) {
         String exts = sp.getString(KEY_TARGET_EXTENSIONS_NEW,"" );
-        if ( exts.length()>0 ){
+        if (!exts.isEmpty()){
             String[] arr = exts.split("\\|");
             int size = arr.length;
             for( int i=0;i<size;i+=2 ){
@@ -135,26 +132,13 @@ public class Prefs
             }
         }else{
             exts = sp.getString(KEY_TARGET_EXTENSIONS_OLD,"txt" );
-            if ( exts.length()>0 ){
+            if (!exts.isEmpty()){
                 String[] arr = exts.split("\\|");
-                int size = arr.length;
-                for( int i=0;i<size;i++ ){
-                    mExtList.add(new CheckedString(arr[i]));
+                for (String s : arr) {
+                    mExtList.add(new CheckedString(s));
                 }
             }
         }
-    }
-
-    public void clearLegacyDirectories() {
-        ArrayList<CheckedString> cleaned = new ArrayList<CheckedString>();
-        for (CheckedString dir : mDirList) {
-            if (dir.hasValue()) {
-                cleaned.add(dir);
-            }
-        }
-        mDirList = cleaned;
-        mLegacyDirectories.clear();
-        needsDirectoryMigration = false;
     }
 
     public void markMigrationPrompted(Context context) {
@@ -213,7 +197,7 @@ public class Prefs
         editor.remove(KEY_TARGET_DIRECTORIES_OLD);
         editor.remove(KEY_TARGET_EXTENSIONS_OLD);
         editor.remove(KEY_TARGET_DIRECTORIES_NEW);
-        editor.putBoolean(KEY_REGULAR_EXPRESSION, mRegularExrpression );
+        editor.putBoolean(KEY_REGULAR_EXPRESSION, mRegularExpression);
         editor.putBoolean(KEY_IGNORE_CASE, mIgnoreCase );
 
         editor.apply();
@@ -236,14 +220,10 @@ public class Prefs
         Map<String,?> all = rsp.getAll();
 
         // Sort entries
-        List<Entry<String,?>> entries = new ArrayList<Entry<String,?>>(all.entrySet());
-        Collections.sort(entries, new Comparator<Entry<String,?>>(){
-            public int compare(Entry<String,?> e1, Entry<String,?> e2){
-                return ((Long)e2.getValue()).compareTo((Long)e1.getValue());
-            }
-        });
+        List<Entry<String,?>> entries = new ArrayList<>(all.entrySet());
+        Collections.sort(entries, (e1, e2) -> ((Long)e2.getValue()).compareTo((Long)e1.getValue()));
         // Collect the results
-        ArrayList<String> result = new ArrayList<String>();
+        ArrayList<String> result = new ArrayList<>();
         for (Entry<String,?> entry : entries) {
             result.add(entry.getKey());
         }

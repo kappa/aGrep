@@ -1,6 +1,5 @@
 package jp.sblo.pandora.aGrep;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,7 +18,7 @@ public class SearchSummary {
         this.query = query;
         this.totalFilesProcessed = totalFilesProcessed;
         this.totalMatchesFound = totalMatchesFound;
-        this.allMatches = allMatches != null ? allMatches : Collections.<GrepView.Data>emptyList();
+        this.allMatches = allMatches != null ? allMatches : Collections.emptyList();
         this.durationMillis = durationMillis;
     }
 }

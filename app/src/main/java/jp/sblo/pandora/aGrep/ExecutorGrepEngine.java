@@ -46,60 +46,57 @@ public class ExecutorGrepEngine implements GrepEngine {
     public void search(SearchRequest request, ProgressCallback callback) {
         cancelled.set(false);
 
-        currentTask = executor.submit(new Runnable() {
-            @Override
-            public void run() {
-                long startTime = System.currentTimeMillis();
-                AtomicInteger fileCount = new AtomicInteger(0);
-                AtomicInteger matchCount = new AtomicInteger(0);
-                List<GrepView.Data> allMatches = Collections.synchronizedList(new ArrayList<GrepView.Data>());
+        currentTask = executor.submit(() -> {
+            long startTime = System.currentTimeMillis();
+            AtomicInteger fileCount = new AtomicInteger(0);
+            AtomicInteger matchCount = new AtomicInteger(0);
+            List<GrepView.Data> allMatches = Collections.synchronizedList(new ArrayList<>());
 
-                try {
-                    for (CheckedString dir : request.prefs.mDirList) {
-                        if (cancelled.get()) {
-                            callback.onComplete(new SearchSummary(
-                                request.query,
-                                fileCount.get(),
-                                matchCount.get(),
-                                allMatches,
-                                System.currentTimeMillis() - startTime
-                            ));
-                            return;
-                        }
+            try {
+                for (CheckedString dir : request.prefs.mDirList) {
+                    if (cancelled.get()) {
+                        callback.onComplete(new SearchSummary(
+                            request.query,
+                            fileCount.get(),
+                            matchCount.get(),
+                            allMatches,
+                            System.currentTimeMillis() - startTime
+                        ));
+                        return;
+                    }
 
-                        if (dir.checked && dir.hasValue()) {
-                            Uri uri = Uri.parse(dir.string);
-                            DocumentFile root = DocumentFile.fromTreeUri(context, uri);
-                            if (root != null && root.isDirectory()) {
-                                String base = dir.getDisplayName();
-                                if (base == null) {
-                                    base = safeName(root);
-                                }
-                                if (!processDocumentTree(root, base != null ? base : "", request, callback,
-                                        fileCount, matchCount, allMatches)) {
-                                    callback.onComplete(new SearchSummary(
-                                        request.query,
-                                        fileCount.get(),
-                                        matchCount.get(),
-                                        allMatches,
-                                        System.currentTimeMillis() - startTime
-                                    ));
-                                    return;
-                                }
+                    if (dir.checked && dir.hasValue()) {
+                        Uri uri = Uri.parse(dir.string);
+                        DocumentFile root = DocumentFile.fromTreeUri(context, uri);
+                        if (root != null && root.isDirectory()) {
+                            String base = dir.getDisplayName();
+                            if (base == null) {
+                                base = safeName(root);
+                            }
+                            if (!processDocumentTree(root, base, request, callback,
+                                    fileCount, matchCount, allMatches)) {
+                                callback.onComplete(new SearchSummary(
+                                    request.query,
+                                    fileCount.get(),
+                                    matchCount.get(),
+                                    allMatches,
+                                    System.currentTimeMillis() - startTime
+                                ));
+                                return;
                             }
                         }
                     }
-
-                    callback.onComplete(new SearchSummary(
-                        request.query,
-                        fileCount.get(),
-                        matchCount.get(),
-                        allMatches,
-                        System.currentTimeMillis() - startTime
-                    ));
-                } catch (Exception e) {
-                    callback.onError(e.getMessage() != null ? e.getMessage() : "Unknown error");
                 }
+
+                callback.onComplete(new SearchSummary(
+                    request.query,
+                    fileCount.get(),
+                    matchCount.get(),
+                    allMatches,
+                    System.currentTimeMillis() - startTime
+                ));
+            } catch (Exception e) {
+                callback.onError(e.getMessage() != null ? e.getMessage() : "Unknown error");
             }
         });
     }
@@ -119,7 +116,7 @@ public class ExecutorGrepEngine implements GrepEngine {
                 }
 
                 String childName = safeName(child);
-                String displayPath = basePath != null && basePath.length() > 0
+                String displayPath = basePath != null && !basePath.isEmpty()
                     ? basePath + "/" + childName : childName;
 
                 boolean res;
@@ -162,7 +159,7 @@ public class ExecutorGrepEngine implements GrepEngine {
             is.mark(65536);
 
             // Detect character encoding
-            String encode = null;
+            String encode;
             UniversalDetector detector = new UniversalDetector(null);
             try {
                 int nread;
@@ -193,7 +190,7 @@ public class ExecutorGrepEngine implements GrepEngine {
             boolean found = false;
             Pattern pattern = request.pattern;
             Matcher m = null;
-            List<GrepView.Data> batch = new ArrayList<GrepView.Data>();
+            List<GrepView.Data> batch = new ArrayList<>();
 
             int currentFileCount = fileCount.incrementAndGet();
 
@@ -223,7 +220,7 @@ public class ExecutorGrepEngine implements GrepEngine {
                             request.query,
                             currentFileCount,
                             currentMatchCount,
-                            new ArrayList<GrepView.Data>(batch)
+                                new ArrayList<>(batch)
                         ));
                         batch.clear();
                     }
@@ -236,7 +233,7 @@ public class ExecutorGrepEngine implements GrepEngine {
                     request.query,
                     currentFileCount,
                     matchCount.get(),
-                    new ArrayList<GrepView.Data>(batch)
+                        new ArrayList<>(batch)
                 ));
             }
 
@@ -246,7 +243,7 @@ public class ExecutorGrepEngine implements GrepEngine {
                     request.query,
                     currentFileCount,
                     matchCount.get(),
-                    Collections.<GrepView.Data>emptyList()
+                    Collections.emptyList()
                 ));
             }
 
@@ -275,7 +272,7 @@ public class ExecutorGrepEngine implements GrepEngine {
         String name = file.getName();
         if (name == null) {
             Uri uri = file.getUri();
-            name = uri != null ? uri.getLastPathSegment() : "";
+            name = uri.getLastPathSegment();
         }
         return name != null ? name : "";
     }
@@ -302,7 +299,7 @@ public class ExecutorGrepEngine implements GrepEngine {
                 }
             }
         }
-        return hasEnabled ? allow : true;
+        return !hasEnabled || allow;
     }
 
     @Override

@@ -28,6 +28,6 @@ public class CheckedString {
     }
 
     public boolean hasValue() {
-        return string != null && string.length() > 0;
+        return string != null && !string.isEmpty();
     }
 }

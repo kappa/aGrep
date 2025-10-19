@@ -5,7 +5,6 @@ import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,7 +58,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
     private File mSharedCacheFile;
     private String mPath;
     private TextPreview mTextPreview;
-    ArrayList<CharSequence> mData = new ArrayList<CharSequence>();
+    ArrayList<CharSequence> mData = new ArrayList<>();
 
     /** Called when the activity is first created. */
     @Override
@@ -72,8 +71,8 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        mPrefs = Prefs.loadPrefes(getApplicationContext());
-        mTextPreview = (TextPreview)findViewById(R.id.TextPreview);
+        mPrefs = Prefs.loadPrefs(getApplicationContext());
+        mTextPreview = findViewById(R.id.TextPreview);
 
         mTextPreview.setOnItemLongClickListener(this);
         mTextPreview.setOnItemClickListener(this);
@@ -130,7 +129,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
 
         if (mPatternText == null) {
             mPatternText = "";
-        } else if (!mPrefs.mRegularExrpression) {
+        } else if (!mPrefs.mRegularExpression) {
             mPatternText = Search.escapeMetaChar(mPatternText);
         }
 
@@ -144,18 +143,12 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
     }
 
     private String resolveDisplayName(Uri uri) {
-        Cursor cursor = null;
-        try {
-            cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+        try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 return cursor.getString(0);
             }
         } catch (Exception e) {
             Log.w(TAG, "Failed to resolve display name", e);
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
         }
         return uri.toString();
     }
@@ -198,7 +191,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
                 is = new BufferedInputStream(rawStream , 65536 );
                 is.mark(65536);
 
-                String encode = null;
+                String encode;
                 // Determine the character encoding
                 UniversalDetector detector = new UniversalDetector(null);
                 try{
@@ -266,7 +259,6 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
                 if (mLine > 0) {
                     mTextPreview.setSelectionFromTop( mLine-1 , height / 4 );
                 }
-                adapter = null;
                 mTextPreview = null;
                 mTask = null;
             }
@@ -277,7 +269,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
         if (closeable != null) {
             try {
                 closeable.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
         }
     }
@@ -297,7 +289,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
         if (id == R.id.menu_viewer) {
             Integer lineNumber = null;
             if ( mPrefs.addLineNumber ){
-                TextPreview textPreview = (TextPreview)findViewById(R.id.TextPreview);
+                TextPreview textPreview = findViewById(R.id.TextPreview);
                 if (textPreview != null) {
                     lineNumber = textPreview.getFirstVisiblePosition();
                 }

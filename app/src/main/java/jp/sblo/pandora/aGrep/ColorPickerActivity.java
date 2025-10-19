@@ -1,11 +1,9 @@
 package jp.sblo.pandora.aGrep;
 
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputFilter;
-import android.text.Spanned;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +15,7 @@ import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -41,8 +40,6 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
     private int mColorIconHeight;
     private int mColorIconPadding;
 
-    private String mTitle;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -56,14 +53,14 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
         }
 
         final Intent intent = getIntent();
-        mTitle = intent.getStringExtra(EXTRA_TITLE);
+        String mTitle = intent.getStringExtra(EXTRA_TITLE);
 
-        setTitle( mTitle );
+        setTitle(mTitle);
 
         mColorIconHeight = (int)getResources().getDimension(R.dimen.color_icon_height);
         mColorIconPadding = (int)getResources().getDimension(R.dimen.color_icon_padding);
 
-        final GridView gv = (GridView)findViewById(R.id.colorgrid);
+        final GridView gv = findViewById(R.id.colorgrid);
         gv.setAdapter(new ColorArrayAdapter(this, 0, COLOR_NAMES));
     }
 
@@ -75,8 +72,9 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
             mContext = context;
         }
 
+        @NonNull
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(int position, View convertView, @NonNull ViewGroup parent) {
             TextView tv = (TextView)convertView;
             if ( tv == null){
                 tv = new TextView(mContext);
@@ -118,41 +116,25 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
     @Override
     public void onClick(View v) {
         final Object tag = v.getTag();
-        if ( tag!=null && tag instanceof ColorName ){
+        if (tag instanceof ColorName){
             final ColorName cn = (ColorName)tag;
             if ( cn.color != 0){
                 setCurrentColor(cn.color);
             }else{
-                final EditText edtInput = new EditText(this);
-                edtInput.setHint(R.string.color_picker_hint);
-                edtInput.setSingleLine();
-                edtInput.setFilters(new InputFilter[]{
-                    new InputFilter() {
-                        @Override
-                        public CharSequence filter(CharSequence source, int start, int end,
-                                Spanned dest, int dstart, int dend) {
-                            if ( dest.length() <6 && source.toString().matches("[0-9a-fA-F]*") ){
-                                return source;
-                            }
-                            return "" ;
-                        }
-                    },
-                });
+                final EditText edtInput = getEditText();
                 new MaterialAlertDialogBuilder(this)
                 .setIcon(R.drawable.icon)
                 .setTitle(R.string.color_picker_input)
                 .setView(edtInput)
-                .setPositiveButton(R.string.label_OK, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        final String text = edtInput.getText().toString();
-                        int code = 0;
-                        try{
-                            code = Integer.parseInt(text, 16);
-                            setCurrentColor(code|0xFF000000);
-                        }catch(Exception e)
-                        {
-                            Toast.makeText(ColorPickerActivity.this, R.string.color_picker_hint, Toast.LENGTH_LONG).show();
-                        }
+                .setPositiveButton(R.string.label_OK, (dialog, whichButton) -> {
+                    final String text = edtInput.getText().toString();
+                    int code;
+                    try{
+                        code = Integer.parseInt(text, 16);
+                        setCurrentColor(code|0xFF000000);
+                    }catch(Exception e)
+                    {
+                        Toast.makeText(ColorPickerActivity.this, R.string.color_picker_hint, Toast.LENGTH_LONG).show();
                     }
                 })
                 .setNegativeButton(R.string.label_CANCEL,null )
@@ -161,22 +143,36 @@ public class ColorPickerActivity extends AppCompatActivity implements View.OnCli
         }
     }
 
+    @NonNull
+    private EditText getEditText() {
+        final EditText edtInput = new EditText(this);
+        edtInput.setHint(R.string.color_picker_hint);
+        edtInput.setSingleLine();
+        edtInput.setFilters(new InputFilter[]{
+                (source, start, end, dest, dstart, dend) -> {
+                    if ( dest.length() <6 && source.toString().matches("[0-9a-fA-F]*") ){
+                        return source;
+                    }
+                    return "" ;
+                },
+        });
+        return edtInput;
+    }
+
     private void setCurrentColor(int color)
     {
         Intent intent = getIntent();
         intent.putExtra(EXTRA_COLOR, color);
         setResult( RESULT_OK , intent );
         finish();
-        return;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        switch (id) {
-            case android.R.id.home:
-                finish();
-                return true;
+        if (id == android.R.id.home) {
+            finish();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }

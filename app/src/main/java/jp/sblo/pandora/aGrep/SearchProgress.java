@@ -1,6 +1,5 @@
 package jp.sblo.pandora.aGrep;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -17,6 +16,6 @@ public class SearchProgress {
         this.query = query;
         this.filesProcessed = filesProcessed;
         this.matchesFound = matchesFound;
-        this.newMatches = newMatches != null ? newMatches : Collections.<GrepView.Data>emptyList();
+        this.newMatches = newMatches != null ? newMatches : Collections.emptyList();
     }
 }

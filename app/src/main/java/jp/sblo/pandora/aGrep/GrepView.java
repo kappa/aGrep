@@ -11,10 +11,11 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
 
 public class GrepView extends ListView {
 
@@ -66,22 +67,16 @@ public class GrepView extends ListView {
         setBackgroundColor(Color.WHITE);
         setCacheColorHint(Color.WHITE);
         setDividerHeight(2);
-        setOnItemClickListener(new OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (mCallback != null) {
-                    mCallback.onGrepItemClicked(position);
-                }
+        setOnItemClickListener((parent, view, position, id) -> {
+            if (mCallback != null) {
+                mCallback.onGrepItemClicked(position);
             }
         });
-        setOnItemLongClickListener(new OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                if (mCallback != null) {
-                    return mCallback.onGrepItemLongClicked(position);
-                }
-                return false;
+        setOnItemLongClickListener((parent, view, position, id) -> {
+            if (mCallback != null) {
+                return mCallback.onGrepItemLongClicked(position);
             }
+            return false;
         });
 
     }
@@ -134,8 +129,9 @@ public class GrepView extends ListView {
             super(context, resource, textViewResourceId, objects);
         }
 
+        @NonNull
         @Override
-        public View getView(int position, View convertView, ViewGroup parent)
+        public View getView(int position, View convertView, @NonNull ViewGroup parent)
         {
             final View view;
             ViewHolder holder;
@@ -147,8 +143,8 @@ public class GrepView extends ListView {
                 view = inflate(getContext() , R.layout.list_row , null );
 
                 holder = new ViewHolder();
-                holder.Index = (TextView)view.findViewById(R.id.ListIndex);
-                holder.kwic = (TextView)view.findViewById(R.id.ListPhone);
+                holder.Index = view.findViewById(R.id.ListIndex);
+                holder.kwic = view.findViewById(R.id.ListPhone);
 
                 holder.Index.setTextColor(Color.BLACK);
                 holder.kwic.setTextColor(Color.BLACK);

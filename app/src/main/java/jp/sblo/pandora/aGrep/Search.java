@@ -1,11 +1,5 @@
 package jp.sblo.pandora.aGrep;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -13,12 +7,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.mozilla.universalchardet.UniversalDetector;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.SearchManager;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -37,13 +28,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.documentfile.provider.DocumentFile;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 
 
@@ -94,7 +84,7 @@ public class Search extends AppCompatActivity implements GrepView.Callback
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
-        mPrefs = Prefs.loadPrefes(this);
+        mPrefs = Prefs.loadPrefs(this);
 
         setContentView(R.layout.result);
 
@@ -119,19 +109,14 @@ public class Search extends AppCompatActivity implements GrepView.Callback
             return;
         }
 
-        mGrepView = (GrepView)findViewById(R.id.DicView01);
-        mData = new ArrayList<GrepView.Data>();
+        mGrepView = findViewById(R.id.DicView01);
+        mData = new ArrayList<>();
         mAdapter = new GrepView.GrepAdapter(getApplicationContext(), R.layout.list_row, R.id.DicView01, mData);
         mGrepView.setAdapter( mAdapter );
         mGrepView.setCallback(this);
 
         // Observe ViewModel state
-        mViewModel.getUiState().observe(this, new Observer<SearchUiState>() {
-            @Override
-            public void onChanged(SearchUiState state) {
-                handleSearchUiState(state);
-            }
-        });
+        mViewModel.getUiState().observe(this, this::handleSearchUiState);
 
         Intent it = getIntent();
 
@@ -141,12 +126,12 @@ public class Search extends AppCompatActivity implements GrepView.Callback
             Bundle extras = it.getExtras();
             mQuery = extras.getString(SearchManager.QUERY);
 
-            if ( mQuery!=null && mQuery.length() >0 ){
+            if ( mQuery!=null && !mQuery.isEmpty()){
 
                 mPrefs.addRecent(this , mQuery);
 
                 String patternText = mQuery;
-                if ( !mPrefs.mRegularExrpression ){
+                if ( !mPrefs.mRegularExpression){
                     patternText = escapeMetaChar(patternText);
                     patternText = convertOrPattern(patternText);
                 }
@@ -198,7 +183,7 @@ public class Search extends AppCompatActivity implements GrepView.Callback
     }
 
     private static Set<String> buildExtensionSet(String[] values) {
-        HashSet<String> set = new HashSet<String>();
+        HashSet<String> set = new HashSet<>();
         if (values != null) {
             for (String value : values) {
                 if (value != null) {
@@ -223,19 +208,11 @@ public class Search extends AppCompatActivity implements GrepView.Callback
         new AlertDialog.Builder(this)
                 .setTitle(R.string.label_migrate_directories_title)
                 .setMessage(R.string.label_migrate_directories_blocking)
-                .setPositiveButton(R.string.label_adddir, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        startActivity(new Intent(Search.this, Settings.class));
-                        finish();
-                    }
+                .setPositiveButton(R.string.label_adddir, (dialog, which) -> {
+                    startActivity(new Intent(Search.this, Settings.class));
+                    finish();
                 })
-                .setNegativeButton(R.string.label_CANCEL, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        finish();
-                    }
-                })
+                .setNegativeButton(R.string.label_CANCEL, (dialog, which) -> finish())
                 .setCancelable(false)
                 .show();
     }
@@ -311,7 +288,7 @@ public class Search extends AppCompatActivity implements GrepView.Callback
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ArrayList<String> needed = collectMediaPermissions();
             if (!needed.isEmpty()) {
-                ActivityCompat.requestPermissions(this, needed.toArray(new String[needed.size()]), REQUEST_MEDIA_PERMISSIONS);
+                ActivityCompat.requestPermissions(this, needed.toArray(new String[0]), REQUEST_MEDIA_PERMISSIONS);
                 return false;
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -324,7 +301,7 @@ public class Search extends AppCompatActivity implements GrepView.Callback
     }
 
     private ArrayList<String> collectMediaPermissions() {
-        ArrayList<String> permissions = new ArrayList<String>();
+        ArrayList<String> permissions = new ArrayList<>();
         boolean needsAudio = false;
         boolean needsImage = false;
         boolean needsVideo = false;
@@ -384,21 +361,15 @@ public class Search extends AppCompatActivity implements GrepView.Callback
         new AlertDialog.Builder(this)
                 .setTitle(R.string.label_manage_storage_title)
                 .setMessage(R.string.label_manage_storage_message)
-                .setPositiveButton(R.string.label_open_settings, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                        intent.setData(Uri.parse("package:" + getPackageName()));
-                        mPendingManageSettings = true;
-                        startActivity(intent);
-                    }
+                .setPositiveButton(R.string.label_open_settings, (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    mPendingManageSettings = true;
+                    startActivity(intent);
                 })
-                .setNegativeButton(R.string.label_CANCEL, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        showPermissionDenied();
-                        finish();
-                    }
+                .setNegativeButton(R.string.label_CANCEL, (dialog, which) -> {
+                    showPermissionDenied();
+                    finish();
                 })
                 .setCancelable(false)
                 .show();
@@ -425,16 +396,14 @@ public class Search extends AppCompatActivity implements GrepView.Callback
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_MEDIA_PERMISSIONS || requestCode == REQUEST_READ_STORAGE) {
             boolean granted = true;
-            if (grantResults != null) {
-                for (int result : grantResults) {
-                    if (result != PackageManager.PERMISSION_GRANTED) {
-                        granted = false;
-                        break;
-                    }
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    granted = false;
+                    break;
                 }
             }
             if (granted) {

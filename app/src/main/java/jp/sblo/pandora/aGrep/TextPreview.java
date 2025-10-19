@@ -12,6 +12,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+
 public class TextPreview extends ListView {
 
 
@@ -55,8 +57,9 @@ public class TextPreview extends ListView {
             super(context, resource, textViewResourceId, objects);
         }
 
+        @NonNull
         @Override
-        public View getView(int position, View convertView, ViewGroup parent)
+        public View getView(int position, View convertView, @NonNull ViewGroup parent)
         {
             TextView view = (TextView)convertView;
             if ( view == null ) {

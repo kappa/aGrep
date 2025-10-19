@@ -1,11 +1,8 @@
 package jp.sblo.pandora.aGrep;
 
-import android.app.SearchManager;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.DocumentsContract;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -52,7 +49,7 @@ public class Settings extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mPrefs = Prefs.loadPrefes(this);
+        mPrefs = Prefs.loadPrefs(this);
         setContentView(R.layout.main);
 
         final Toolbar toolbar = findViewById(R.id.topAppBar);
@@ -76,7 +73,7 @@ public class Settings extends AppCompatActivity {
         mQueryInput.setOnEditorActionListener(this::onQueryEditorAction);
         mRecentAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line,
-                new ArrayList<String>());
+                new ArrayList<>());
         mQueryInput.setAdapter(mRecentAdapter);
 
         final MaterialButton historyButton = findViewById(R.id.button_history);
@@ -102,11 +99,11 @@ public class Settings extends AppCompatActivity {
         mRegularExpressionSwitch = findViewById(R.id.checkre);
         mIgnoreCaseSwitch = findViewById(R.id.checkignorecase);
 
-        mRegularExpressionSwitch.setChecked(mPrefs.mRegularExrpression);
+        mRegularExpressionSwitch.setChecked(mPrefs.mRegularExpression);
         mIgnoreCaseSwitch.setChecked(mPrefs.mIgnoreCase);
 
         mRegularExpressionSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            mPrefs.mRegularExrpression = isChecked;
+            mPrefs.mRegularExpression = isChecked;
             mPrefs.savePrefs(Settings.this);
         });
         mIgnoreCaseSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -205,7 +202,7 @@ public class Settings extends AppCompatActivity {
     }
 
     private void addExtension(@NonNull String ext) {
-        if (ext.length() == 0) {
+        if (ext.isEmpty()) {
             return;
         }
         for (CheckedString checkedString : mPrefs.mExtList) {
@@ -264,12 +261,7 @@ public class Settings extends AppCompatActivity {
         if (list == null) {
             return;
         }
-        Collections.sort(list, new Comparator<CheckedString>() {
-            @Override
-            public int compare(CheckedString o1, CheckedString o2) {
-                return o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName());
-            }
-        });
+        Collections.sort(list, (o1, o2) -> o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName()));
     }
 
     @Override
@@ -291,8 +283,8 @@ public class Settings extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        mPrefs = Prefs.loadPrefes(this);
-        mRegularExpressionSwitch.setChecked(mPrefs.mRegularExrpression);
+        mPrefs = Prefs.loadPrefs(this);
+        mRegularExpressionSwitch.setChecked(mPrefs.mRegularExpression);
         mIgnoreCaseSwitch.setChecked(mPrefs.mIgnoreCase);
         refreshLists();
 
@@ -320,12 +312,7 @@ public class Settings extends AppCompatActivity {
             items.clear();
             if (newItems != null) {
                 items.addAll(newItems);
-                Collections.sort(items, new Comparator<CheckedString>() {
-                    @Override
-                    public int compare(CheckedString o1, CheckedString o2) {
-                        return o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName());
-                    }
-                });
+                Collections.sort(items, (o1, o2) -> o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName()));
             }
             notifyDataSetChanged();
         }
