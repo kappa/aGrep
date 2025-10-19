@@ -5,6 +5,7 @@ import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,17 +46,19 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
     public  static final String EXTRA_LINE = "line";
     public  static final String EXTRA_QUERY = "query";
     public  static final String EXTRA_PATH = "path";
+    public  static final String EXTRA_URI = "uri";
+    public  static final String EXTRA_DISPLAY_NAME = "display";
     private static final String TAG = "TextViewer";
 
     private TextLoadTask mTask;
     private String mPatternText;
     private int mLine;
     private Prefs mPrefs;
-    private String mPath;
-    private TextPreview mTextPreview;
     private Uri mSourceUri;
     private Uri mGrantedUri;
     private File mSharedCacheFile;
+    private String mPath;
+    private TextPreview mTextPreview;
     ArrayList<CharSequence> mData = new ArrayList<CharSequence>();
 
     /** Called when the activity is first created. */
@@ -89,7 +92,16 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
         mPatternText = null;
         mLine = 0;
 
-        if (extra != null && extra.containsKey(EXTRA_PATH)) {
+        // Support EXTRA_URI from SAF implementation
+        if (extra != null && extra.containsKey(EXTRA_URI)) {
+            String uriString = extra.getString(EXTRA_URI);
+            if (uriString != null) {
+                mSourceUri = Uri.parse(uriString);
+            }
+            mPath = extra.getString(EXTRA_DISPLAY_NAME);
+            mPatternText = extra.getString(EXTRA_QUERY);
+            mLine = extra.getInt(EXTRA_LINE);
+        } else if (extra != null && extra.containsKey(EXTRA_PATH)) {
             mPath = extra.getString(EXTRA_PATH);
             if (!TextUtils.isEmpty(mPath)) {
                 mSourceUri = Uri.fromFile(new File(mPath));
@@ -147,7 +159,6 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
         }
         return uri.toString();
     }
-
     class TextLoadTask extends AsyncTask<Uri, Integer, Boolean >{
         int mOffsetForLine=-1;
 

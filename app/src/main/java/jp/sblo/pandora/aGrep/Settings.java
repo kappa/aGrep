@@ -9,6 +9,7 @@ import android.app.SearchManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -26,12 +27,14 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.documentfile.provider.DocumentFile;
 
 public class Settings extends AppCompatActivity {
-
-    final static int REQUEST_CODE_ADDDIC = 0x1001;
 
     private Prefs mPrefs;
     private LinearLayout mDirListView;
@@ -41,6 +44,7 @@ public class Settings extends AppCompatActivity {
     private CompoundButton.OnCheckedChangeListener mCheckListener;
     private ArrayAdapter<String> mRecentAdapter;
     private Context mContext;
+    private ActivityResultLauncher<Uri> mDirPickerLauncher;
 
     /** Called when the activity is first created. */
     @Override
@@ -49,6 +53,15 @@ public class Settings extends AppCompatActivity {
         mContext = this;
 
         mPrefs = Prefs.loadPrefes(this);
+
+        mDirPickerLauncher = registerForActivityResult(new ActivityResultContracts.OpenDocumentTree(), new ActivityResultCallback<Uri>() {
+            @Override
+            public void onActivityResult(Uri result) {
+                if (result != null) {
+                    handleDirectorySelection(result);
+                }
+            }
+        });
 
         setContentView(R.layout.main);
 
@@ -114,6 +127,13 @@ public class Settings extends AppCompatActivity {
         refreshDirList();
         refreshExtList();
 
+        if (mPrefs.needsDirectoryMigration) {
+            if (mPrefs.shouldPromptDirectoryMigration) {
+                showMigrationDialog();
+                mPrefs.markMigrationPrompted(this);
+            }
+        }
+
         ImageButton btnAddDir = (ImageButton) findViewById(R.id.adddir);
         ImageButton btnAddExt = (ImageButton) findViewById(R.id.addext);
 
@@ -122,9 +142,12 @@ public class Settings extends AppCompatActivity {
             @Override
             public void onClick(View v)
             {
-                // ファイル選択画面呼び出し
-                Intent intent = new Intent( mContext , FileSelectorActivity.class );
-                startActivityForResult(intent, REQUEST_CODE_ADDDIC);
+                // ディレクトリ選択
+                if (mPrefs.needsDirectoryMigration) {
+                    mPrefs.clearLegacyDirectories();
+                    refreshDirList();
+                }
+                mDirPickerLauncher.launch(null);
             }
         });
 
@@ -254,27 +277,62 @@ public class Settings extends AppCompatActivity {
 
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    private void handleDirectorySelection(Uri uri) {
+        if (uri == null) {
+            return;
+        }
 
-        super.onActivityResult(requestCode, resultCode, data);
+        final int takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
+        try {
+            getContentResolver().takePersistableUriPermission(uri, takeFlags);
+        } catch (SecurityException e) {
+            android.widget.Toast.makeText(this, R.string.label_unable_access, android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
 
-        // ディレクトリ選択画面からの応答
-        if (requestCode == REQUEST_CODE_ADDDIC && resultCode == RESULT_OK && data != null) {
-            final String dirname = data.getExtras().getString(FileSelectorActivity.INTENT_FILEPATH );
-            if (dirname != null && dirname.length()>0 ) {
-                // 二重チェック
-                for( CheckedString t : mPrefs.mDirList ){
-                    if ( t.string.equalsIgnoreCase(dirname)){
-                        return;
-                    }
-                }
-                mPrefs.mDirList.add(new CheckedString(dirname));
-                refreshDirList();
-                mPrefs.savePrefs(mContext);
+        String uriString = uri.toString();
+        for (CheckedString dir : mPrefs.mDirList) {
+            if (dir.hasValue() && uriString.equals(dir.string)) {
+                return;
             }
         }
 
+        DocumentFile documentFile = DocumentFile.fromTreeUri(this, uri);
+        String displayName = documentFile != null ? documentFile.getName() : null;
+        if (displayName == null) {
+            displayName = uri.getLastPathSegment();
+        }
+        if (displayName == null) {
+            displayName = uriString;
+        }
+
+        mPrefs.mDirList.add(new CheckedString(true, uriString, displayName));
+        refreshDirList();
+        mPrefs.savePrefs(this);
+    }
+
+    private void showMigrationDialog() {
+        StringBuilder message = new StringBuilder();
+        message.append(getString(R.string.label_migrate_directories_message));
+        if (!mPrefs.mLegacyDirectories.isEmpty()) {
+            message.append("\n\n");
+            for (String legacy : mPrefs.mLegacyDirectories) {
+                message.append("• ").append(legacy).append('\n');
+            }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.label_migrate_directories_title)
+                .setMessage(message.toString())
+                .setPositiveButton(R.string.label_adddir, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        mPrefs.clearLegacyDirectories();
+                        refreshDirList();
+                        mDirPickerLauncher.launch(null);
+                    }
+                })
+                .setNegativeButton(R.string.label_CANCEL, null)
+                .show();
     }
 
     void setListItem( LinearLayout view ,
@@ -286,15 +344,23 @@ public class Settings extends AppCompatActivity {
         Collections.sort(list, new Comparator<CheckedString>() {
             @Override
             public int compare(CheckedString object1, CheckedString object2) {
-                return object1.string.compareToIgnoreCase(object2.string);
+                String name1 = object1.getDisplayName();
+                String name2 = object2.getDisplayName();
+                if (name1 == null) {
+                    return name2 == null ? 0 : -1;
+                }
+                if (name2 == null) {
+                    return 1;
+                }
+                return name1.compareToIgnoreCase(name2);
             }
         });
         for( CheckedString s : list ){
             CheckBox v = (CheckBox)View.inflate(this, R.layout.list_dir, null);
-            if ( s.equals("*") ){
+            if ( "*".equals(s.string) ){
                 v.setText(R.string.label_no_extension);
             }else{
-                v.setText(s.string);
+                v.setText(s.getDisplayName());
             }
             v.setChecked( s.checked );
             v.setTag(s);
