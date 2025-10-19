@@ -200,26 +200,21 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
 
                 String encode = null;
                 //  文字コードの判定
+                UniversalDetector detector = new UniversalDetector(null);
                 try{
-                    UniversalDetector detector = new UniversalDetector();
-                    try{
-                        int nread;
-                        byte[] buff = new byte[4096];
-                        if ((nread = is.read(buff)) > 0 ) {
-                            detector.handleData(buff, 0, nread);
-                        }
-                        detector.dataEnd();
+                    int nread;
+                    byte[] buff = new byte[4096];
+                    if ((nread = is.read(buff)) > 0 ) {
+                        detector.handleData(buff, 0, nread);
                     }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                        return false;
-                    }
-                    encode = detector.getCharset();
+                    detector.dataEnd();
+                    encode = detector.getDetectedCharset();
                     is.reset();
                     detector.reset();
-                    detector.destroy();
                 }
-                catch( UniversalDetector.DetectorException e ){
+                catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
                 }
                 try {
                     if ( encode != null ){
