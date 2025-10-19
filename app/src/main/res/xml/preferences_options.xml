@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <Preference
+        android:key="pref_version"
+        app:iconSpaceReserved="false" />
+
+    <ListPreference
+        android:key="FontSize"
+        android:title="@string/label_font_size"
+        app:entries="@array/font_size_entries"
+        app:entryValues="@array/font_size_values"
+        app:useSimpleSummaryProvider="true" />
+
+    <Preference
+        android:key="HighlightBg"
+        android:title="@string/label_highlight_bg"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:key="HighlightFg"
+        android:title="@string/label_highlight_fg"
+        app:iconSpaceReserved="false" />
+
+    <SwitchPreferenceCompat
+        android:key="AddLineNumber"
+        android:title="@string/label_add_linenumber"
+        android:summary="@string/summary_add_linenumber" />
+
+    <Preference
+        android:title="@string/icondesign"
+        android:summary="@string/iconsite"
+        android:key="pref_icon_credit"
+        app:iconSpaceReserved="false" />
+
+</PreferenceScreen>
