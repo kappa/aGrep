@@ -17,13 +17,11 @@ import org.mozilla.universalchardet.UniversalDetector;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.ProgressDialog;
 import android.app.SearchManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -34,6 +32,9 @@ import android.text.SpannableString;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.ActionBar;
@@ -42,6 +43,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 
 
 
@@ -51,11 +54,15 @@ public class Search extends AppCompatActivity implements GrepView.Callback
     private GrepView mGrepView;
     private GrepView.GrepAdapter mAdapter;
     private ArrayList<GrepView.Data>	mData ;
-    private GrepTask mTask;
     private String mQuery;
     private Pattern mPattern;
 
     private Prefs mPrefs;
+    private SearchViewModel mViewModel;
+
+    private View mSearchStatusContainer;
+    private ProgressBar mSearchProgress;
+    private TextView mSearchStatus;
 
     private boolean mPendingSearch;
     private boolean mPendingManageSettings;
@@ -91,6 +98,15 @@ public class Search extends AppCompatActivity implements GrepView.Callback
 
         setContentView(R.layout.result);
 
+        // Initialize ViewModel
+        mViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
+        mViewModel.initializeEngine(this);
+
+        // Initialize UI components
+        mSearchStatusContainer = findViewById(R.id.searchStatusContainer);
+        mSearchProgress = findViewById(R.id.searchProgress);
+        mSearchStatus = findViewById(R.id.searchStatus);
+
         if (mPrefs.needsDirectoryMigration) {
             showMigrationRequiredDialog();
             return;
@@ -108,6 +124,14 @@ public class Search extends AppCompatActivity implements GrepView.Callback
         mAdapter = new GrepView.GrepAdapter(getApplicationContext(), R.layout.list_row, R.id.DicView01, mData);
         mGrepView.setAdapter( mAdapter );
         mGrepView.setCallback(this);
+
+        // Observe ViewModel state
+        mViewModel.getUiState().observe(this, new Observer<SearchUiState>() {
+            @Override
+            public void onChanged(SearchUiState state) {
+                handleSearchUiState(state);
+            }
+        });
 
         Intent it = getIntent();
 
@@ -219,17 +243,55 @@ public class Search extends AppCompatActivity implements GrepView.Callback
     private void beginSearch() {
         mPendingSearch = true;
         if (ensureStoragePermissions()) {
-            startGrepTask();
+            startSearch();
         }
     }
 
-    private void startGrepTask() {
-        if (mTask != null) {
-            mTask.cancel(true);
-        }
+    private void startSearch() {
         mPendingSearch = false;
-        mTask = new GrepTask();
-        mTask.execute(mQuery);
+        SearchRequest request = new SearchRequest(mQuery, mPattern, mPrefs);
+        mViewModel.search(request);
+    }
+
+    private void handleSearchUiState(SearchUiState state) {
+        if (state.isSearching) {
+            // Show progress UI
+            mSearchStatusContainer.setVisibility(View.VISIBLE);
+            mSearchProgress.setVisibility(View.VISIBLE);
+
+            if (state.progress != null) {
+                mSearchStatus.setText(getString(R.string.progress, state.progress.query, state.progress.filesProcessed));
+
+                // Add new matches to the list
+                if (state.progress.newMatches != null && !state.progress.newMatches.isEmpty()) {
+                    synchronized (mData) {
+                        mData.addAll(state.progress.newMatches);
+                        mAdapter.notifyDataSetChanged();
+                        mGrepView.setSelection(mData.size() - 1);
+                    }
+                }
+            }
+        } else if (state.summary != null) {
+            // Search completed
+            mSearchStatusContainer.setVisibility(View.GONE);
+            mSearchProgress.setVisibility(View.GONE);
+
+            synchronized (mData) {
+                Collections.sort(mData, new GrepView.Data());
+                mAdapter.notifyDataSetChanged();
+            }
+            mGrepView.setSelection(0);
+            Toast.makeText(getApplicationContext(), R.string.grep_finished, Toast.LENGTH_LONG).show();
+        } else if (state.errorMessage != null) {
+            // Search error
+            mSearchStatusContainer.setVisibility(View.GONE);
+            mSearchProgress.setVisibility(View.GONE);
+            Toast.makeText(getApplicationContext(), state.errorMessage, Toast.LENGTH_LONG).show();
+        } else {
+            // Idle state
+            mSearchStatusContainer.setVisibility(View.GONE);
+            mSearchProgress.setVisibility(View.GONE);
+        }
     }
 
     private boolean ensureStoragePermissions() {
@@ -355,7 +417,7 @@ public class Search extends AppCompatActivity implements GrepView.Callback
             mPendingManageSettings = false;
             if (mPendingSearch) {
                 if (ensureStoragePermissions()) {
-                    startGrepTask();
+                    startSearch();
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
                     showPermissionDenied();
                     finish();
@@ -379,526 +441,13 @@ public class Search extends AppCompatActivity implements GrepView.Callback
             }
             if (granted) {
                 if (mPendingSearch) {
-                    startGrepTask();
+                    startSearch();
                 }
             } else {
                 mPendingSearch = false;
                 showPermissionDenied();
                 finish();
             }
-        }
-    }
-
-
-    class GrepTask extends AsyncTask<String, GrepView.Data, Boolean>
-    {
-        private ProgressDialog mProgressDialog;
-        private int mFileCount=0;
-        private int mFoundcount=0;
-        private boolean mCancelled;
-
-        @Override
-        protected void onPreExecute() {
-            mCancelled=false;
-            mProgressDialog = new ProgressDialog(Search.this);
-            mProgressDialog.setTitle(R.string.grep_spinner);
-            mProgressDialog.setMessage(mQuery);
-            mProgressDialog.setIndeterminate(true);
-            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-            mProgressDialog.setCancelable(true);
-            mProgressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-
-                @Override
-                public void onCancel(DialogInterface dialog)
-                {
-                    mCancelled=true;
-                    cancel(false);
-                }
-            });
-            mProgressDialog.show();
-        }
-
-        @Override
-        protected Boolean doInBackground(String... params)
-        {
-            return grepRoot( params[0] );
-        }
-
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            mProgressDialog.dismiss();
-            mProgressDialog = null;
-            synchronized( mData ){
-                Collections.sort( mData , new GrepView.Data() );
-                mAdapter.notifyDataSetChanged();
-            }
-            mGrepView.setSelection(0);
-            Toast.makeText(getApplicationContext(),result?R.string.grep_finished:R.string.grep_canceled, Toast.LENGTH_LONG).show();
-            mData = null;
-            mAdapter = null;
-            mTask = null;
-        }
-
-        @Override
-        protected void onCancelled() {
-            super.onCancelled();
-            onPostExecute(false);
-        }
-
-        @Override
-        protected void onProgressUpdate(GrepView.Data... progress)
-        {
-            if ( isCancelled() ){
-                return;
-            }
-            mProgressDialog.setMessage( Search.this.getString(R.string.progress ,mQuery,mFileCount));
-            if ( progress != null ){
-                synchronized( mData ){
-                    for( GrepView.Data data : progress ){
-                        mData.add(data);
-                    }
-                    mAdapter.notifyDataSetChanged();
-                    mGrepView.setSelection(mData.size()-1);
-                }
-            }
-        }
-
-
-        boolean grepRoot( String text )
-        {
-            for( CheckedString dir : mPrefs.mDirList ){
-                if (isCancelled()){
-                    return false;
-                }
-                if ( dir.checked && dir.hasValue() ){
-                    Uri uri = Uri.parse(dir.string);
-                    DocumentFile root = DocumentFile.fromTreeUri(Search.this, uri);
-                    if (root != null && root.isDirectory()) {
-                        String base = dir.getDisplayName();
-                        if (base == null) {
-                            base = safeName(root);
-                        }
-                        if (!grepDocumentTree(root, base != null ? base : "")) {
-                            return false;
-                        }
-                    }
-                }
-            }
-            return true;
-        }
-
-        boolean grepDocumentTree(DocumentFile dir, String basePath )
-        {
-            if ( isCancelled() ){
-                return false;
-            }
-            DocumentFile[] children = dir.listFiles();
-            if (children != null) {
-                for (DocumentFile child : children) {
-                    if (isCancelled()) {
-                        return false;
-                    }
-                    String childName = safeName(child);
-                    String displayPath = basePath != null && basePath.length() > 0 ? basePath + "/" + childName : childName;
-                    boolean res;
-                    if (child.isDirectory()) {
-                        res = grepDocumentTree(child, displayPath);
-                    } else {
-                        res = grepDocument(child, displayPath);
-                    }
-                    if (!res) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-
-        boolean grepDocument( DocumentFile document , String displayPath )
-        {
-            if ( isCancelled() ){
-                return false;
-            }
-            if ( document==null ){
-                return false;
-            }
-
-            String name = safeName(document);
-            if (!matchesExtension(name)) {
-                return true;
-            }
-
-            InputStream is;
-            try {
-                is = new BufferedInputStream( getContentResolver().openInputStream(document.getUri()) , 65536 );
-                is.mark(65536);
-
-                //  文字コードの判定
-                String encode = null;
-                try{
-                    UniversalDetector detector = new UniversalDetector();
-                    try{
-                        int nread;
-                        byte[] buff = new byte[4096];
-                        if ((nread = is.read(buff)) > 0 ) {
-                            detector.handleData(buff, 0,nread);
-                        }
-                        detector.dataEnd();
-                    }
-                    catch( FileNotFoundException e ){
-                        e.printStackTrace();
-                        is.close();
-                        return true;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        is.close();
-                        return true;
-                    }
-                    encode = detector.getCharset();
-                    detector.reset();
-                    detector.destroy();
-                }
-                catch( UniversalDetector.DetectorException e){
-                }
-                is.reset();
-
-                BufferedReader br=null;
-                try {
-                    if ( encode != null ){
-                        br = new BufferedReader( new InputStreamReader( is , encode ) , 8192 );
-
-                    }else{
-                        br = new BufferedReader( new InputStreamReader( is ) , 8192 );
-                    }
-
-                    String text;
-                    int line = 0;
-                    boolean found = false;
-                    Pattern pattern = mPattern;
-                    Matcher m = null;
-                    ArrayList<GrepView.Data>    data  = null ;
-                    mFileCount++;
-                    while(  ( text = br.readLine() )!=null ){
-                        line ++;
-                        if ( m== null ){
-                            m = pattern.matcher( text );
-                        }else{
-                            m.reset( text );
-                        }
-                        if ( m.find() ){
-                            found = true;
-
-                            synchronized( mData ){
-                                mFoundcount++;
-                                if ( data == null ){
-                                    data = new ArrayList<GrepView.Data>();
-                                }
-                                data.add(new GrepView.Data(document.getUri(), displayPath, line, text));
-
-                                if ( mFoundcount < 10 ){
-                                    publishProgress(data.toArray(new GrepView.Data[0]));
-                                    data = null;
-                                }
-                            }
-                            if ( mCancelled ){
-                                break;
-                            }
-                        }
-                    }
-                    br.close();
-                    is.close();
-                    if ( data != null ){
-                        publishProgress(data.toArray(new GrepView.Data[0]));
-                        data=null;
-                    }
-                    if ( !found ) {
-                        if ( mFileCount % 10 == 0 ){
-                            publishProgress((GrepView.Data[])null);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-            return true;
-        }
-
-        private String safeName(DocumentFile file) {
-            if (file == null) {
-                return "";
-            }
-            String name = file.getName();
-            if (name == null) {
-                Uri uri = file.getUri();
-                name = uri != null ? uri.getLastPathSegment() : "";
-            }
-            return name != null ? name : "";
-        }
-
-        private boolean matchesExtension(String fileName) {
-            if (fileName == null) {
-                return false;
-            }
-            String lower = fileName.toLowerCase();
-            boolean allow = false;
-            boolean hasEnabled = false;
-            for( CheckedString ext : mPrefs.mExtList ){
-                if ( ext.checked ){
-                    hasEnabled = true;
-                    if ( "*".equals(ext.string) ){
-                        if ( lower.indexOf('.')== -1 ){
-                            allow = true;
-                            break;
-                        }
-                    }else if ( lower.endsWith("."+ext.string.toLowerCase())){
-                        allow = true;
-                        break;
-                    }
-                }
-            }
-            return hasEnabled ? allow : true;
-        }
-    }
-
-    class GrepTask extends AsyncTask<String, GrepView.Data, Boolean>
-    {
-        private ProgressDialog mProgressDialog;
-        private int mFileCount=0;
-        private int mFoundcount=0;
-        private boolean mCancelled;
-
-        @Override
-        protected void onPreExecute() {
-            mCancelled=false;
-            mProgressDialog = new ProgressDialog(Search.this);
-            mProgressDialog.setTitle(R.string.grep_spinner);
-            mProgressDialog.setMessage(mQuery);
-            mProgressDialog.setIndeterminate(true);
-            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-            mProgressDialog.setCancelable(true);
-            mProgressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
-
-                @Override
-                public void onCancel(DialogInterface dialog)
-                {
-                    mCancelled=true;
-                    cancel(false);
-                }
-            });
-            mProgressDialog.show();
-        }
-
-        @Override
-        protected Boolean doInBackground(String... params)
-        {
-            return grepRoot( params[0] );
-        }
-
-
-        @Override
-        protected void onPostExecute(Boolean result) {
-            mProgressDialog.dismiss();
-            mProgressDialog = null;
-            synchronized( mData ){
-                Collections.sort( mData , new GrepView.Data() );
-                mAdapter.notifyDataSetChanged();
-            }
-            mGrepView.setSelection(0);
-            Toast.makeText(getApplicationContext(),result?R.string.grep_finished:R.string.grep_canceled, Toast.LENGTH_LONG).show();
-            mData = null;
-            mAdapter = null;
-            mTask = null;
-        }
-
-        @Override
-        protected void onCancelled() {
-            super.onCancelled();
-            onPostExecute(false);
-        }
-
-        @Override
-        protected void onProgressUpdate(GrepView.Data... progress)
-        {
-            if ( isCancelled() ){
-                return;
-            }
-            mProgressDialog.setMessage( Search.this.getString(R.string.progress ,mQuery,mFileCount));
-            if ( progress != null ){
-                synchronized( mData ){
-                    for( GrepView.Data data : progress ){
-                        mData.add(data);
-                    }
-                    mAdapter.notifyDataSetChanged();
-                    mGrepView.setSelection(mData.size()-1);
-                }
-            }
-        }
-
-
-        boolean grepRoot( String text )
-        {
-            for( CheckedString dir : mPrefs.mDirList ){
-                if ( dir.checked && !grepDirectory(new File(dir.string) ) ){
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        boolean grepDirectory( File dir )
-        {
-            if ( isCancelled() ){
-                return false;
-            }
-            if ( dir==null ){
-                return false;
-            }
-
-            File[] flist = dir.listFiles( );
-
-            if ( flist != null ){
-                for( File f : flist ){
-                    boolean res = false;
-                    if ( f.isDirectory() ){
-                        res = grepDirectory( f );
-                    }else{
-                        res = grepFile( f );
-                    }
-                    if ( !res ) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-
-        boolean grepFile( File file  )
-        {
-            if ( isCancelled() ){
-                return false;
-            }
-            if ( file==null ){
-                return false;
-            }
-
-            boolean extok=false;
-            for( CheckedString ext : mPrefs.mExtList ){
-                if ( ext.checked ){
-                    if ( ext.string.equals("*") ){
-                        if ( file.getName().indexOf('.')== -1 ){
-                            extok = true;
-                            break;
-                        }
-                    }else if ( file.getName().toLowerCase().endsWith("."+ext.string.toLowerCase())){
-                        extok = true;
-                        break;
-                    }
-                }
-            }
-            if ( !extok ){
-                return true;
-            }
-
-            InputStream is;
-            try {
-                is = new BufferedInputStream( new FileInputStream( file ) , 65536 );
-                is.mark(65536);
-
-                //  文字コードの判定
-                String encode = null;
-                try{
-                    UniversalDetector detector = new UniversalDetector();
-                    try{
-                        int nread;
-                        byte[] buff = new byte[4096];
-                        if ((nread = is.read(buff)) > 0 ) {
-                            detector.handleData(buff, 0,nread);
-                        }
-                        detector.dataEnd();
-                    }
-                    catch( FileNotFoundException e ){
-                        e.printStackTrace();
-                        is.close();
-                        return true;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        is.close();
-                        return true;
-                    }
-                    encode = detector.getCharset();
-                    detector.reset();
-                    detector.destroy();
-                }
-                catch( UniversalDetector.DetectorException e){
-                }
-                is.reset();
-
-                BufferedReader br=null;
-                try {
-                    if ( encode != null ){
-                        br = new BufferedReader( new InputStreamReader( is , encode ) , 8192 );
-
-                    }else{
-                        br = new BufferedReader( new InputStreamReader( is ) , 8192 );
-                    }
-
-                    String text;
-                    int line = 0;
-                    boolean found = false;
-                    Pattern pattern = mPattern;
-                    Matcher m = null;
-                    ArrayList<GrepView.Data>    data  = null ;
-                    mFileCount++;
-                    while(  ( text = br.readLine() )!=null ){
-                        line ++;
-                        if ( m== null ){
-                            m = pattern.matcher( text );
-                        }else{
-                            m.reset( text );
-                        }
-                        if ( m.find() ){
-                            found = true;
-
-                            synchronized( mData ){
-                                mFoundcount++;
-                                if ( data == null ){
-                                    data = new ArrayList<GrepView.Data>();
-                                }
-                                data.add(new GrepView.Data(file, line, text));
-
-                                if ( mFoundcount < 10 ){
-                                    publishProgress(data.toArray(new GrepView.Data[0]));
-                                    data = null;
-                                }
-                            }
-                            if ( mCancelled ){
-                                break;
-                            }
-                        }
-                    }
-                    br.close();
-                    is.close();
-                    if ( data != null ){
-                        publishProgress(data.toArray(new GrepView.Data[0]));
-                        data=null;
-                    }
-                    if ( !found ) {
-                        if ( mFileCount % 10 == 0 ){
-                            publishProgress((GrepView.Data[])null);
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-            return true;
         }
     }
 
