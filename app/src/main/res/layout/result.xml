@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:orientation="vertical" android:layout_width="fill_parent"
+  android:layout_height="fill_parent" android:id="@+id/LinearLayout01">
+
+<!---
+  <LinearLayout android:id="@+id/LinearLayout01"
+    android:orientation="horizontal" android:layout_width="fill_parent"
+    android:layout_height="wrap_content">
+    <jp.sblo.pandora.adice.DicEditText
+      android:id="@+id/EditText01" android:layout_width="wrap_content"
+      android:capitalize="none" android:layout_weight="1"
+      android:layout_height="fill_parent" android:singleLine="true" />
+    <ImageButton android:layout_width="wrap_content"  android:src="@drawable/clr"
+      android:layout_height="fill_parent" android:id="@+id/ButtonClear" />
+  </LinearLayout>
+  -->
+  <LinearLayout
+    android:id="@+id/searchStatusContainer"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="8dp"
+    android:visibility="gone">
+
+    <ProgressBar
+      android:id="@+id/searchProgress"
+      style="?android:attr/progressBarStyleSmall"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:visibility="gone" />
+
+    <TextView
+      android:id="@+id/searchStatus"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginStart="8dp"
+      android:text="@string/grep_spinner"
+      android:textAppearance="?android:attr/textAppearanceSmall" />
+  </LinearLayout>
+
+  <jp.sblo.pandora.aGrep.GrepView
+    android:id="@+id/DicView01" android:layout_width="fill_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1" />
+
+</LinearLayout>

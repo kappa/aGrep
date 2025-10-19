@@ -1,0 +1,511 @@
+package jp.sblo.pandora.aGrep;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.mozilla.universalchardet.UniversalDetector;
+
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.SearchManager;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.DocumentsContract;
+import android.provider.Settings;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.BackgroundColorSpan;
+import android.text.style.ForegroundColorSpan;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.documentfile.provider.DocumentFile;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
+
+
+
+@SuppressLint("DefaultLocale")
+public class Search extends AppCompatActivity implements GrepView.Callback
+{
+    private GrepView mGrepView;
+    private GrepView.GrepAdapter mAdapter;
+    private ArrayList<GrepView.Data>	mData ;
+    private String mQuery;
+    private Pattern mPattern;
+
+    private Prefs mPrefs;
+    private SearchViewModel mViewModel;
+
+    private View mSearchStatusContainer;
+    private ProgressBar mSearchProgress;
+    private TextView mSearchStatus;
+
+    private boolean mPendingSearch;
+    private boolean mPendingManageSettings;
+    private boolean mManageEducationShown;
+
+    private static final int REQUEST_MEDIA_PERMISSIONS = 0x2001;
+    private static final int REQUEST_READ_STORAGE = 0x2002;
+
+    private static final Set<String> IMAGE_EXTENSIONS = buildExtensionSet(new String[]{
+            "jpg", "jpeg", "png", "gif", "bmp", "webp", "heic", "heif"
+    });
+    private static final Set<String> VIDEO_EXTENSIONS = buildExtensionSet(new String[]{
+            "mp4", "mkv", "avi", "mov", "wmv", "webm", "3gp"
+    });
+    private static final Set<String> AUDIO_EXTENSIONS = buildExtensionSet(new String[]{
+            "mp3", "wav", "flac", "aac", "ogg", "m4a", "wma"
+    });
+    private static final String PERMISSION_READ_MEDIA_AUDIO = "android.permission.READ_MEDIA_AUDIO";
+    private static final String PERMISSION_READ_MEDIA_IMAGES = "android.permission.READ_MEDIA_IMAGES";
+    private static final String PERMISSION_READ_MEDIA_VIDEO = "android.permission.READ_MEDIA_VIDEO";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
+
+        mPrefs = Prefs.loadPrefes(this);
+
+        setContentView(R.layout.result);
+
+        // Initialize ViewModel
+        mViewModel = new ViewModelProvider(this).get(SearchViewModel.class);
+        mViewModel.initializeEngine(this);
+
+        // Initialize UI components
+        mSearchStatusContainer = findViewById(R.id.searchStatusContainer);
+        mSearchProgress = findViewById(R.id.searchProgress);
+        mSearchStatus = findViewById(R.id.searchStatus);
+
+        if (mPrefs.needsDirectoryMigration) {
+            showMigrationRequiredDialog();
+            return;
+        }
+
+        if (!hasActiveDirectories()) {
+            Toast.makeText(getApplicationContext(), R.string.label_no_target_dir, Toast.LENGTH_LONG).show();
+            startActivity(new Intent(this, Settings.class));
+            finish();
+            return;
+        }
+
+        mGrepView = (GrepView)findViewById(R.id.DicView01);
+        mData = new ArrayList<GrepView.Data>();
+        mAdapter = new GrepView.GrepAdapter(getApplicationContext(), R.layout.list_row, R.id.DicView01, mData);
+        mGrepView.setAdapter( mAdapter );
+        mGrepView.setCallback(this);
+
+        // Observe ViewModel state
+        mViewModel.getUiState().observe(this, new Observer<SearchUiState>() {
+            @Override
+            public void onChanged(SearchUiState state) {
+                handleSearchUiState(state);
+            }
+        });
+
+        Intent it = getIntent();
+
+        if (it != null &&
+            Intent.ACTION_SEARCH.equals(it.getAction()) )
+        {
+            Bundle extras = it.getExtras();
+            mQuery = extras.getString(SearchManager.QUERY);
+
+            if ( mQuery!=null && mQuery.length() >0 ){
+
+                mPrefs.addRecent(this , mQuery);
+
+                String patternText = mQuery;
+                if ( !mPrefs.mRegularExrpression ){
+                    patternText = escapeMetaChar(patternText);
+                    patternText = convertOrPattern(patternText);
+                }
+
+                if ( mPrefs.mIgnoreCase ){
+//                        mPatternText = text.toLowerCase();
+                    mPattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE|Pattern.MULTILINE );
+                }else{
+//                        mPatternText = text;
+                    mPattern = Pattern.compile(patternText);
+                }
+
+                if ( Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState() ) ) {
+                    mData.clear();
+                    mAdapter.setFormat( mPattern , mPrefs.mHighlightFg , mPrefs.mHighlightBg , mPrefs.mFontSize );
+                    beginSearch();
+                }
+            }else{
+                finish();
+            }
+        }
+    }
+
+    static public String escapeMetaChar( String pattern )
+    {
+        final String metachar = ".^${}[]*+?|()\\";
+
+        StringBuilder newpat = new StringBuilder();
+
+        int len = pattern.length();
+
+        for( int i=0;i<len;i++ ){
+            char c = pattern.charAt(i);
+            if ( metachar.indexOf(c) >=0 ){
+                newpat.append('\\');
+            }
+            newpat.append(c);
+        }
+        return newpat.toString();
+    }
+
+    static public String convertOrPattern( String pattern )
+    {
+        if ( pattern.contains(" ") ){
+            return "(" + pattern.replace(" ", "|") + ")";
+        }else{
+            return pattern;
+        }
+    }
+
+    private static Set<String> buildExtensionSet(String[] values) {
+        HashSet<String> set = new HashSet<String>();
+        if (values != null) {
+            for (String value : values) {
+                if (value != null) {
+                    set.add(value.toLowerCase());
+                }
+            }
+        }
+        return set;
+    }
+
+    private boolean hasActiveDirectories() {
+        for (CheckedString dir : mPrefs.mDirList) {
+            if (dir.checked && dir.hasValue()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void showMigrationRequiredDialog() {
+        mPrefs.markMigrationPrompted(this);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.label_migrate_directories_title)
+                .setMessage(R.string.label_migrate_directories_blocking)
+                .setPositiveButton(R.string.label_adddir, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startActivity(new Intent(Search.this, Settings.class));
+                        finish();
+                    }
+                })
+                .setNegativeButton(R.string.label_CANCEL, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private void beginSearch() {
+        mPendingSearch = true;
+        if (ensureStoragePermissions()) {
+            startSearch();
+        }
+    }
+
+    private void startSearch() {
+        mPendingSearch = false;
+        SearchRequest request = new SearchRequest(mQuery, mPattern, mPrefs);
+        mViewModel.search(request);
+    }
+
+    private void handleSearchUiState(SearchUiState state) {
+        if (state.isSearching) {
+            // Show progress UI
+            mSearchStatusContainer.setVisibility(View.VISIBLE);
+            mSearchProgress.setVisibility(View.VISIBLE);
+
+            if (state.progress != null) {
+                mSearchStatus.setText(getString(R.string.progress, state.progress.query, state.progress.filesProcessed));
+
+                // Add new matches to the list
+                if (state.progress.newMatches != null && !state.progress.newMatches.isEmpty()) {
+                    synchronized (mData) {
+                        mData.addAll(state.progress.newMatches);
+                        mAdapter.notifyDataSetChanged();
+                        mGrepView.setSelection(mData.size() - 1);
+                    }
+                }
+            }
+        } else if (state.summary != null) {
+            // Search completed
+            mSearchStatusContainer.setVisibility(View.GONE);
+            mSearchProgress.setVisibility(View.GONE);
+
+            synchronized (mData) {
+                Collections.sort(mData, new GrepView.Data());
+                mAdapter.notifyDataSetChanged();
+            }
+            mGrepView.setSelection(0);
+            Toast.makeText(getApplicationContext(), R.string.grep_finished, Toast.LENGTH_LONG).show();
+        } else if (state.errorMessage != null) {
+            // Search error
+            mSearchStatusContainer.setVisibility(View.GONE);
+            mSearchProgress.setVisibility(View.GONE);
+            Toast.makeText(getApplicationContext(), state.errorMessage, Toast.LENGTH_LONG).show();
+        } else {
+            // Idle state
+            mSearchStatusContainer.setVisibility(View.GONE);
+            mSearchProgress.setVisibility(View.GONE);
+        }
+    }
+
+    private boolean ensureStoragePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && isAllFilesMode()) {
+            if (!Environment.isExternalStorageManager()) {
+                if (!mManageEducationShown) {
+                    showManageStorageDialog();
+                    mManageEducationShown = true;
+                } else if (!mPendingManageSettings) {
+                    showPermissionDenied();
+                    finish();
+                }
+                return false;
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ArrayList<String> needed = collectMediaPermissions();
+            if (!needed.isEmpty()) {
+                ActivityCompat.requestPermissions(this, needed.toArray(new String[needed.size()]), REQUEST_MEDIA_PERMISSIONS);
+                return false;
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_READ_STORAGE);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private ArrayList<String> collectMediaPermissions() {
+        ArrayList<String> permissions = new ArrayList<String>();
+        boolean needsAudio = false;
+        boolean needsImage = false;
+        boolean needsVideo = false;
+        boolean wildcard = false;
+        for (CheckedString ext : mPrefs.mExtList) {
+            if (!ext.checked || ext.string == null) {
+                continue;
+            }
+            String lower = ext.string.toLowerCase();
+            if ("*".equals(lower)) {
+                wildcard = true;
+                break;
+            }
+            if (IMAGE_EXTENSIONS.contains(lower)) {
+                needsImage = true;
+            }
+            if (VIDEO_EXTENSIONS.contains(lower)) {
+                needsVideo = true;
+            }
+            if (AUDIO_EXTENSIONS.contains(lower)) {
+                needsAudio = true;
+            }
+        }
+        if (wildcard) {
+            needsAudio = true;
+            needsImage = true;
+            needsVideo = true;
+        }
+        if (needsAudio && ContextCompat.checkSelfPermission(this, PERMISSION_READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(PERMISSION_READ_MEDIA_AUDIO);
+        }
+        if (needsImage && ContextCompat.checkSelfPermission(this, PERMISSION_READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(PERMISSION_READ_MEDIA_IMAGES);
+        }
+        if (needsVideo && ContextCompat.checkSelfPermission(this, PERMISSION_READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(PERMISSION_READ_MEDIA_VIDEO);
+        }
+        return permissions;
+    }
+
+    private boolean isAllFilesMode() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            return false;
+        }
+        for (CheckedString dir : mPrefs.mDirList) {
+            if (!dir.checked || !dir.hasValue()) {
+                continue;
+            }
+            Uri uri = Uri.parse(dir.string);
+            String documentId = DocumentsContract.getTreeDocumentId(uri);
+            if (documentId != null && documentId.endsWith(":")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void showManageStorageDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.label_manage_storage_title)
+                .setMessage(R.string.label_manage_storage_message)
+                .setPositiveButton(R.string.label_open_settings, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                        intent.setData(Uri.parse("package:" + getPackageName()));
+                        mPendingManageSettings = true;
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton(R.string.label_CANCEL, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        showPermissionDenied();
+                        finish();
+                    }
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    private void showPermissionDenied() {
+        Toast.makeText(this, R.string.label_permission_denied, Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mPendingManageSettings) {
+            mPendingManageSettings = false;
+            if (mPendingSearch) {
+                if (ensureStoragePermissions()) {
+                    startSearch();
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+                    showPermissionDenied();
+                    finish();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_MEDIA_PERMISSIONS || requestCode == REQUEST_READ_STORAGE) {
+            boolean granted = true;
+            if (grantResults != null) {
+                for (int result : grantResults) {
+                    if (result != PackageManager.PERMISSION_GRANTED) {
+                        granted = false;
+                        break;
+                    }
+                }
+            }
+            if (granted) {
+                if (mPendingSearch) {
+                    startSearch();
+                }
+            } else {
+                mPendingSearch = false;
+                showPermissionDenied();
+                finish();
+            }
+        }
+    }
+
+    public static SpannableString highlightKeyword(CharSequence text, Pattern p, int fgcolor, int bgcolor)
+    {
+        SpannableString ss = new SpannableString(text);
+
+        if (p == null) {
+            return ss;
+        }
+
+        int start = 0;
+        int end;
+        Matcher m = p.matcher( text );
+        while (m.find(start)) {
+            start = m.start();
+            end = m.end();
+
+            BackgroundColorSpan bgspan = new BackgroundColorSpan(bgcolor);
+            ss.setSpan(bgspan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            ForegroundColorSpan fgspan = new ForegroundColorSpan(fgcolor);
+            ss.setSpan(fgspan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+            start = end;
+        }
+        return ss;
+    }
+
+    @Override
+    public void onGrepItemClicked(int position)
+    {
+        GrepView.Data data = (GrepView.Data) mGrepView.getAdapter().getItem(position);
+
+        Intent it = new Intent(this,TextViewer.class);
+
+        if (data.mUri != null) {
+            it.putExtra(TextViewer.EXTRA_URI , data.mUri.toString() );
+        }
+        it.putExtra(TextViewer.EXTRA_DISPLAY_NAME, data.mDisplayName);
+        it.putExtra(TextViewer.EXTRA_QUERY, mQuery);
+        it.putExtra(TextViewer.EXTRA_LINE, data.mLinenumber );
+
+        startActivity(it);
+    }
+
+    @Override
+    public boolean onGrepItemLongClicked(int position)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == android.R.id.home) {
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+}

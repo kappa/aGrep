@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="version">aGrep version %s</string>
+    <string name="link">© 2014 Aquamarine Networks.</string>
+    <string name="icondesign">Icon designed by Non Miyabi</string>
+    <string name="iconsite">Non\'s Illust Gallery</string>
+    <string name="iconlink">http://sites.google.com/site/nonsillustgallery/</string>
+
+    <string name="app_name">aGrep</string>
+    <string name="app_selector">Select directory</string>
+    <string name="grep_spinner">Now searching…</string>
+    <string name="grep_finished">Finished.</string>
+    <string name="grep_canceled">Canceled.</string>
+
+    <string name="label_dir">Target Directories</string>
+    <string name="label_ext">Target Extensions</string>
+    <string name="label_re">Regular Expression</string>
+    <string name="label_ignore_case">Ignore Case</string>
+    <string name="label_adddir">Add Directory</string>
+    <string name="label_addext">Add Extension</string>
+    <string name="label_hint">Search word</string>
+
+    <string name="label_OK">OK</string>
+    <string name="label_CANCEL">Cancel</string>
+    <string name="label_YES">Yes</string>
+    <string name="label_NO">No</string>
+
+    <string name="label_remove_item_title">Remove item</string>
+    <string name="label_remove_item">%s\nAre you sure?</string>
+
+    <string name="label_no_target_dir">There is no target directory.\nPlease set target directory.</string>
+
+    <string name="menu_viewer">View</string>
+
+    <string name="progress">%1$s (in %2$d files)</string>
+
+    <string name="label_unable_access">Unable Access…</string>
+    <string name="label_long_press">LongPress to apply the directory.</string>
+
+  <string name="label_option">Preferences</string>
+  <string name="label_font_size">Font Size</string>
+  <string name="label_highlight_fg">Highlight Text Color</string>
+  <string name="label_highlight_bg">Highlight BG Color</string>
+  <string name="label_no_extension">No Extension</string>
+
+  <string name="label_add_linenumber">Send Intent with line number</string>
+  <string name="summary_add_linenumber">If you open the file by Jota+/Jota Text Editor, automatically move the line.</string>
+
+  <string name="summary_color_value">Current color: %1$s</string>
+  <string name="toolbar_navigation_cd">Navigate back</string>
+  <string name="content_desc_history">Show recent searches</string>
+  <string name="content_desc_search">Start search</string>
+  <string name="content_desc_clear">Clear search query</string>
+  <string name="content_desc_add_directory">Add directory</string>
+  <string name="content_desc_add_extension">Add extension</string>
+  <string name="label_history">History</string>
+  <string name="label_search">Search</string>
+  <string name="label_clear">Clear</string>
+
+  <string name="label_copied">Copied to clipboard</string>
+  <string name="label_open_external_failed">Unable to open file in external app.</string>
+  <string name="color_picker_input">Input Color code</string>
+  <string name="color_picker_hint">Enter 6-digit hexadecimal</string>
+
+  <string name="label_migrate_directories_title">Update directory access</string>
+  <string name="label_migrate_directories_message">aGrep now uses the system file picker. Please re-select your directories.</string>
+  <string name="label_migrate_directories_blocking">aGrep needs permission to your directories again. Open settings to re-select the folders you want to search.</string>
+  <string name="label_permission_denied">Storage permission denied. Please enable it in system settings to continue searching.</string>
+  <string name="label_manage_storage_title">Allow access to all files</string>
+  <string name="label_manage_storage_message">Android requires "All files access" to search every file on this device. Continue to the next screen to grant permission.</string>
+  <string name="label_open_settings">Open Settings</string>
+
+</resources>
