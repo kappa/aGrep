@@ -1,8 +1,5 @@
 package jp.sblo.pandora.aGrep;
 
-import android.app.ActionBar;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -20,7 +17,11 @@ import android.widget.GridView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class ColorPickerActivity extends Activity implements View.OnClickListener {
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class ColorPickerActivity extends AppCompatActivity implements View.OnClickListener {
 
     static class ColorName{
         int color;
@@ -47,9 +48,11 @@ public class ColorPickerActivity extends Activity implements View.OnClickListene
         setResult( RESULT_CANCELED );
         setContentView(R.layout.colorpickeractivity);
 
-        ActionBar actionBar = getActionBar();
-        actionBar.setHomeButtonEnabled(true);
-        actionBar.setDisplayHomeAsUpEnabled (true);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setHomeButtonEnabled(true);
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         final Intent intent = getIntent();
         mTitle = intent.getStringExtra(EXTRA_TITLE);
@@ -167,14 +170,14 @@ public class ColorPickerActivity extends Activity implements View.OnClickListene
     }
 
     @Override
-    public boolean onMenuItemSelected(int featureId, MenuItem item) {
+    public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         switch (id) {
             case android.R.id.home:
                 finish();
                 return true;
         }
-        return super.onMenuItemSelected(featureId, item);
+        return super.onOptionsItemSelected(item);
     }
 
     static final ColorName[] COLOR_NAMES = new ColorName[]{
