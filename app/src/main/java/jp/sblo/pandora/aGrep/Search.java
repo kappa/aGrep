@@ -366,9 +366,7 @@ public class Search extends AppCompatActivity implements GrepView.Callback
     }
 
     private boolean isAllFilesMode() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            return false;
-        }
+        // minSdkVersion is 21 (LOLLIPOP), no need to check
         for (CheckedString dir : mPrefs.mDirList) {
             if (!dir.checked || !dir.hasValue()) {
                 continue;

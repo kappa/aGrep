@@ -284,7 +284,7 @@ public class ExecutorGrepEngine implements GrepEngine {
         if (fileName == null) {
             return false;
         }
-        String lower = fileName.toLowerCase();
+        String lower = fileName.toLowerCase(java.util.Locale.ROOT);
         boolean allow = false;
         boolean hasEnabled = false;
 
@@ -296,7 +296,7 @@ public class ExecutorGrepEngine implements GrepEngine {
                         allow = true;
                         break;
                     }
-                } else if (lower.endsWith("." + ext.string.toLowerCase())) {
+                } else if (lower.endsWith("." + ext.string.toLowerCase(java.util.Locale.ROOT))) {
                     allow = true;
                     break;
                 }

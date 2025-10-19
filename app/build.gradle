@@ -28,6 +28,11 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
+    lint {
+        // Allow missing translations - will fallback to English
+        disable 'MissingTranslation'
+    }
+
     packagingOptions {
         resources {
             excludes += ['/META-INF/{AL2.0,LGPL2.1}']
