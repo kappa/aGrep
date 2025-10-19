@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Material Design colors with underscores (for custom use) -->
     <color name="color_primary">#FFA8C14A</color>
     <color name="color_primary_variant">#FF8DA03E</color>
     <color name="color_secondary">#FF4CAF50</color>
@@ -10,4 +11,11 @@
     <color name="color_on_surface">#FF000000</color>
     <color name="color_background">#FFF6F6F6</color>
     <color name="color_on_background">#FF000000</color>
+
+    <!-- Material Design colors without underscores (for theme attributes) -->
+    <color name="colorPrimary">#FFA8C14A</color>
+    <color name="colorPrimaryVariant">#FF8DA03E</color>
+    <color name="colorOnPrimary">#FF000000</color>
+    <color name="colorSecondary">#FF4CAF50</color>
+    <color name="colorOnSecondary">#FFFFFFFF</color>
 </resources>
