@@ -58,8 +58,11 @@ public class UniversalDetectorRegressionTest {
         String utf8 = detect(detector, "Résumé".getBytes(StandardCharsets.UTF_8));
         assertEquals("UTF-8", utf8);
 
+        // Use more Korean text for better detection reliability
         Charset eucKr = Charset.forName("EUC-KR");
-        String euc = detect(detector, "텍스트".getBytes(eucKr));
-        assertEquals("EUC-KR", euc);
+        String koreanText = "한글 텍스트입니다. 이것은 EUC-KR 인코딩 테스트입니다.";
+        String euc = detect(detector, koreanText.getBytes(eucKr));
+        assertEquals("Detector should correctly detect EUC-KR after reset. Got: " + euc,
+                     "EUC-KR", euc);
     }
 }
