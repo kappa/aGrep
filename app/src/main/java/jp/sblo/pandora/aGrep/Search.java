@@ -664,9 +664,251 @@ public class Search extends AppCompatActivity implements GrepView.Callback
         }
     }
 
+    class GrepTask extends AsyncTask<String, GrepView.Data, Boolean>
+    {
+        private ProgressDialog mProgressDialog;
+        private int mFileCount=0;
+        private int mFoundcount=0;
+        private boolean mCancelled;
+
+        @Override
+        protected void onPreExecute() {
+            mCancelled=false;
+            mProgressDialog = new ProgressDialog(Search.this);
+            mProgressDialog.setTitle(R.string.grep_spinner);
+            mProgressDialog.setMessage(mQuery);
+            mProgressDialog.setIndeterminate(true);
+            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            mProgressDialog.setCancelable(true);
+            mProgressDialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+
+                @Override
+                public void onCancel(DialogInterface dialog)
+                {
+                    mCancelled=true;
+                    cancel(false);
+                }
+            });
+            mProgressDialog.show();
+        }
+
+        @Override
+        protected Boolean doInBackground(String... params)
+        {
+            return grepRoot( params[0] );
+        }
+
+
+        @Override
+        protected void onPostExecute(Boolean result) {
+            mProgressDialog.dismiss();
+            mProgressDialog = null;
+            synchronized( mData ){
+                Collections.sort( mData , new GrepView.Data() );
+                mAdapter.notifyDataSetChanged();
+            }
+            mGrepView.setSelection(0);
+            Toast.makeText(getApplicationContext(),result?R.string.grep_finished:R.string.grep_canceled, Toast.LENGTH_LONG).show();
+            mData = null;
+            mAdapter = null;
+            mTask = null;
+        }
+
+        @Override
+        protected void onCancelled() {
+            super.onCancelled();
+            onPostExecute(false);
+        }
+
+        @Override
+        protected void onProgressUpdate(GrepView.Data... progress)
+        {
+            if ( isCancelled() ){
+                return;
+            }
+            mProgressDialog.setMessage( Search.this.getString(R.string.progress ,mQuery,mFileCount));
+            if ( progress != null ){
+                synchronized( mData ){
+                    for( GrepView.Data data : progress ){
+                        mData.add(data);
+                    }
+                    mAdapter.notifyDataSetChanged();
+                    mGrepView.setSelection(mData.size()-1);
+                }
+            }
+        }
+
+
+        boolean grepRoot( String text )
+        {
+            for( CheckedString dir : mPrefs.mDirList ){
+                if ( dir.checked && !grepDirectory(new File(dir.string) ) ){
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        boolean grepDirectory( File dir )
+        {
+            if ( isCancelled() ){
+                return false;
+            }
+            if ( dir==null ){
+                return false;
+            }
+
+            File[] flist = dir.listFiles( );
+
+            if ( flist != null ){
+                for( File f : flist ){
+                    boolean res = false;
+                    if ( f.isDirectory() ){
+                        res = grepDirectory( f );
+                    }else{
+                        res = grepFile( f );
+                    }
+                    if ( !res ) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+
+        boolean grepFile( File file  )
+        {
+            if ( isCancelled() ){
+                return false;
+            }
+            if ( file==null ){
+                return false;
+            }
+
+            boolean extok=false;
+            for( CheckedString ext : mPrefs.mExtList ){
+                if ( ext.checked ){
+                    if ( ext.string.equals("*") ){
+                        if ( file.getName().indexOf('.')== -1 ){
+                            extok = true;
+                            break;
+                        }
+                    }else if ( file.getName().toLowerCase().endsWith("."+ext.string.toLowerCase())){
+                        extok = true;
+                        break;
+                    }
+                }
+            }
+            if ( !extok ){
+                return true;
+            }
+
+            InputStream is;
+            try {
+                is = new BufferedInputStream( new FileInputStream( file ) , 65536 );
+                is.mark(65536);
+
+                //  文字コードの判定
+                String encode = null;
+                try{
+                    UniversalDetector detector = new UniversalDetector();
+                    try{
+                        int nread;
+                        byte[] buff = new byte[4096];
+                        if ((nread = is.read(buff)) > 0 ) {
+                            detector.handleData(buff, 0,nread);
+                        }
+                        detector.dataEnd();
+                    }
+                    catch( FileNotFoundException e ){
+                        e.printStackTrace();
+                        is.close();
+                        return true;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        is.close();
+                        return true;
+                    }
+                    encode = detector.getCharset();
+                    detector.reset();
+                    detector.destroy();
+                }
+                catch( UniversalDetector.DetectorException e){
+                }
+                is.reset();
+
+                BufferedReader br=null;
+                try {
+                    if ( encode != null ){
+                        br = new BufferedReader( new InputStreamReader( is , encode ) , 8192 );
+
+                    }else{
+                        br = new BufferedReader( new InputStreamReader( is ) , 8192 );
+                    }
+
+                    String text;
+                    int line = 0;
+                    boolean found = false;
+                    Pattern pattern = mPattern;
+                    Matcher m = null;
+                    ArrayList<GrepView.Data>    data  = null ;
+                    mFileCount++;
+                    while(  ( text = br.readLine() )!=null ){
+                        line ++;
+                        if ( m== null ){
+                            m = pattern.matcher( text );
+                        }else{
+                            m.reset( text );
+                        }
+                        if ( m.find() ){
+                            found = true;
+
+                            synchronized( mData ){
+                                mFoundcount++;
+                                if ( data == null ){
+                                    data = new ArrayList<GrepView.Data>();
+                                }
+                                data.add(new GrepView.Data(file, line, text));
+
+                                if ( mFoundcount < 10 ){
+                                    publishProgress(data.toArray(new GrepView.Data[0]));
+                                    data = null;
+                                }
+                            }
+                            if ( mCancelled ){
+                                break;
+                            }
+                        }
+                    }
+                    br.close();
+                    is.close();
+                    if ( data != null ){
+                        publishProgress(data.toArray(new GrepView.Data[0]));
+                        data=null;
+                    }
+                    if ( !found ) {
+                        if ( mFileCount % 10 == 0 ){
+                            publishProgress((GrepView.Data[])null);
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            return true;
+        }
+    }
+
     public static SpannableString highlightKeyword(CharSequence text, Pattern p, int fgcolor, int bgcolor)
     {
         SpannableString ss = new SpannableString(text);
+
+        if (p == null) {
+            return ss;
+        }
 
         int start = 0;
         int end;

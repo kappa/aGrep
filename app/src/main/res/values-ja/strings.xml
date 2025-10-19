@@ -45,6 +45,7 @@
   <string name="summary_add_linenumber">Jota+ または Jota Text Editorで開く時、指定行番号まで自動的に移動するようになります。</string>
 
   <string name="label_copied">クリップボードにコピーしました。</string>
+  <string name="label_open_external_failed">外部アプリでファイルを開けませんでした。</string>
 
     <string name="color_picker_input">カラーコード入力</string>
     <string name="color_picker_hint">16進数6桁で入力してください</string>
