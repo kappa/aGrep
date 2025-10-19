@@ -3,6 +3,7 @@ package jp.sblo.pandora.aGrep;
 import android.app.SearchManager;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.view.Menu;
@@ -14,7 +15,6 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -65,12 +65,9 @@ public class Settings extends AppCompatActivity {
 
         directoryPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.OpenDocumentTree(),
-                new ActivityResultCallback<Uri>() {
-                    @Override
-                    public void onActivityResult(Uri result) {
-                        if (result != null) {
-                            handleDirectorySelection(result);
-                        }
+                uri -> {
+                    if (uri != null) {
+                        handleDirectorySelection(uri);
                     }
                 });
 
@@ -270,7 +267,7 @@ public class Settings extends AppCompatActivity {
         Collections.sort(list, new Comparator<CheckedString>() {
             @Override
             public int compare(CheckedString o1, CheckedString o2) {
-                return o1.string.compareToIgnoreCase(o2.string);
+                return o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName());
             }
         });
     }
@@ -326,7 +323,7 @@ public class Settings extends AppCompatActivity {
                 Collections.sort(items, new Comparator<CheckedString>() {
                     @Override
                     public int compare(CheckedString o1, CheckedString o2) {
-                        return o1.string.compareToIgnoreCase(o2.string);
+                        return o1.getDisplayName().compareToIgnoreCase(o2.getDisplayName());
                     }
                 });
             }
