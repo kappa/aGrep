@@ -23,7 +23,14 @@ https://sites.google.com/site/aquamarinepandora/home/agrepja (Japanese)
 
 ■License
 
-・This software is distributed under NYSL.
+・This repository contains a maintained fork of the original aGrep.
+  The software continues to be distributed under the NYSL license
+  (Version 0.9982).
+・Clause A-4 of the NYSL requires modified versions to be released
+  under the modifier's own name. Releases and distributions from
+  this repository therefore identify the current maintainers of this
+  fork rather than the original author, while preserving the original
+  license terms below.
 
 NYSL Version 0.9982
 
