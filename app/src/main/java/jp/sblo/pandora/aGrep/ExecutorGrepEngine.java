@@ -163,27 +163,22 @@ public class ExecutorGrepEngine implements GrepEngine {
 
             // Detect character encoding
             String encode = null;
+            UniversalDetector detector = new UniversalDetector(null);
             try {
-                UniversalDetector detector = new UniversalDetector();
-                try {
-                    int nread;
-                    byte[] buff = new byte[4096];
-                    if ((nread = is.read(buff)) > 0) {
-                        detector.handleData(buff, 0, nread);
-                    }
-                    detector.dataEnd();
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    return true;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return true;
+                int nread;
+                byte[] buff = new byte[4096];
+                if ((nread = is.read(buff)) > 0) {
+                    detector.handleData(buff, 0, nread);
                 }
-                encode = detector.getCharset();
+                detector.dataEnd();
+                encode = detector.getDetectedCharset();
                 detector.reset();
-                detector.destroy();
-            } catch (UniversalDetector.DetectorException e) {
-                // Ignore, will use default encoding
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return true;
             }
             is.reset();
 
