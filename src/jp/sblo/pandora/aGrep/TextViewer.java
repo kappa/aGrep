@@ -80,6 +80,7 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
 
     private void handleIntent(Intent intent) {
         Bundle extra = intent.getExtras();
+        clearSharedUriGrant();
         mSourceUri = null;
         mPath = null;
         mPatternText = null;
@@ -324,11 +325,7 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
     }
 
     private Uri prepareSharedUri() {
-        if (TextUtils.isEmpty(mPath)) {
-            return null;
-        }
-        File source = new File(mPath);
-        if (!source.exists()) {
+        if (mSourceUri == null) {
             return null;
         }
         clearSharedUriGrant();
@@ -336,13 +333,22 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
         if (!cacheDir.exists() && !cacheDir.mkdirs()) {
             return null;
         }
-        String name = source.getName();
-        String extension = "";
-        int dot = name.lastIndexOf('.');
-        if (dot >= 0) {
-            extension = name.substring(dot);
-        } else {
-            extension = ".txt";
+        String scheme = mSourceUri.getScheme();
+        String baseName = null;
+        if (!TextUtils.isEmpty(mPath)) {
+            baseName = new File(mPath).getName();
+        }
+        if (TextUtils.isEmpty(baseName) && ("file".equals(scheme) || scheme == null)) {
+            File sourceFile = new File(mSourceUri.getPath());
+            baseName = sourceFile.getName();
+        }
+        if (TextUtils.isEmpty(baseName)) {
+            baseName = "shared.txt";
+        }
+        String extension = ".txt";
+        int dot = baseName.lastIndexOf('.');
+        if (dot >= 0 && dot < baseName.length() - 1) {
+            extension = baseName.substring(dot);
         }
         File destination;
         try {
@@ -351,10 +357,7 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
             Log.e(TAG, "Failed to create cache file", e);
             return null;
         }
-        try {
-            copyFile(source, destination);
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to copy file to cache", e);
+        if (!copySourceTo(destination)) {
             destination.delete();
             return null;
         }
@@ -362,11 +365,15 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
         return FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", destination);
     }
 
-    private void copyFile(File source, File destination) throws IOException {
+    private boolean copySourceTo(File destination) {
         InputStream in = null;
         OutputStream out = null;
         try {
-            in = new FileInputStream(source);
+            in = openSourceStream();
+            if (in == null) {
+                Log.e(TAG, "Unable to open source for sharing: " + mSourceUri);
+                return false;
+            }
             out = new FileOutputStream(destination);
             byte[] buffer = new byte[8192];
             int length;
@@ -374,10 +381,29 @@ public class TextViewer extends Activity implements OnItemLongClickListener , On
                 out.write(buffer, 0, length);
             }
             out.flush();
+            return true;
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to copy source into cache", e);
         } finally {
             closeQuietly(out);
             closeQuietly(in);
         }
+        return false;
+    }
+
+    private InputStream openSourceStream() throws IOException {
+        if (mSourceUri == null) {
+            return null;
+        }
+        String scheme = mSourceUri.getScheme();
+        if ("file".equals(scheme) || scheme == null) {
+            File sourceFile = new File(mSourceUri.getPath());
+            if (!sourceFile.exists()) {
+                return null;
+            }
+            return new FileInputStream(sourceFile);
+        }
+        return getContentResolver().openInputStream(mSourceUri);
     }
 
     private void clearSharedUriGrant() {
