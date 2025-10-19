@@ -222,7 +222,7 @@ public class Prefs
 
     public void addRecent(Context context , String searchWord)
     {
-        // 書き出し
+        // Write the entry
         final SharedPreferences rsp = context.getSharedPreferences(PREF_RECENT, Context.MODE_PRIVATE);
         Editor reditor = rsp.edit();
         reditor.putLong(searchWord, System.currentTimeMillis());
@@ -231,24 +231,24 @@ public class Prefs
 
     public List<String> getRecent(Context context)
     {
-        // ロード
+        // Load entries
         final SharedPreferences rsp = context.getSharedPreferences(PREF_RECENT, Context.MODE_PRIVATE);
         Map<String,?> all = rsp.getAll();
 
-        // ソート
+        // Sort entries
         List<Entry<String,?>> entries = new ArrayList<Entry<String,?>>(all.entrySet());
         Collections.sort(entries, new Comparator<Entry<String,?>>(){
             public int compare(Entry<String,?> e1, Entry<String,?> e2){
                 return ((Long)e2.getValue()).compareTo((Long)e1.getValue());
             }
         });
-        // 取り出し
+        // Collect the results
         ArrayList<String> result = new ArrayList<String>();
         for (Entry<String,?> entry : entries) {
             result.add(entry.getKey());
         }
 
-        // 30個目以降は削除
+        // Remove items beyond the 30th entry
         final int MAX = 30;
         final int size = result.size();
         if ( size > MAX ){

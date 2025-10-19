@@ -199,7 +199,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
                 is.mark(65536);
 
                 String encode = null;
-                //  文字コードの判定
+                // Determine the character encoding
                 UniversalDetector detector = new UniversalDetector(null);
                 try{
                     int nread;
@@ -450,7 +450,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
     }
     @Override
     public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-        // テキストのコピー
+        // Copy the text
         ClipboardManager cm = (ClipboardManager)getSystemService(Context.CLIPBOARD_SERVICE);
         TextView tv = (TextView)arg1;
         ClipData clip = ClipData.newPlainText("aGrep Text Viewer",tv.getText());
