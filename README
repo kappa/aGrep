@@ -6,11 +6,7 @@ A modern fork of aGrep - Grep-like text search program for Android.
 This is a maintained and updated version of the original aGrep application,
 originally developed by Jiro and Aquamarine Networks.
 
-**Application ID:** dev.kappa.agrep_again
-**Repository:** https://github.com/kappa/aGrep-again
-
-Support OS: Android 5.0 (Lollipop) and above (minSdk 21)
-
+Supported OS: Android 5.0 (Lollipop) and above (minSdk 21)
 
 ■Original aGrep Information
 
@@ -23,6 +19,7 @@ The original aGrep application:
 ■Development Environment
 ・Android Studio
 ・Android SDK (compileSdk 34, targetSdk 34)
+・Repository: https://github.com/kappa/aGrep-again
 
 ■License
 
@@ -103,11 +100,6 @@ ColorPickerDialog
 
 
 ----------------------------------------------------------
-Copyright (C) 2010, Aquamarine Networks.
+aGrep Copyright (C) 2010, Aquamarine Networks.
 
-Blog: http://pandora.sblo.jp/
-
-Mail : Jiro <pandora@aquamarine.sakura.ne.jp>
-
-Twitter: @jiro_aqua
-
+aGrep again Copyright (C) 2025, Alex Kapranoff.
