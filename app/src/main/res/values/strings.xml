@@ -6,7 +6,7 @@
     <string name="iconsite">Non\'s Illust Gallery</string>
     <string name="iconlink" translatable="false">http://sites.google.com/site/nonsillustgallery/</string>
 
-    <string name="app_name" translatable="false">aGrep</string>
+    <string name="app_name" translatable="false">aGrep again</string>
     <string name="app_selector">Select directory</string>
     <string name="grep_spinner">Now searching…</string>
     <string name="grep_finished">Finished.</string>

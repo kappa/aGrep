@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = 'jp.sblo.pandora.aGrep'
+    namespace = 'dev.kappa.agrep_again'
     compileSdk = 34
 
     defaultConfig {
-        applicationId = 'jp.sblo.pandora.aGrep'
+        applicationId = 'dev.kappa.agrep_again'
         minSdk = 21
         targetSdk = 34
         versionCode = 201403
