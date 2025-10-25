@@ -10,8 +10,8 @@ android {
         applicationId = 'dev.kappa.agrep_again'
         minSdk = 21
         targetSdk = 34
-        versionCode = 201403
-        versionName = '2014.03'
+        versionCode = 1
+        versionName = '1.0.0'
 
         testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
     }
