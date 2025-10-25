@@ -35,10 +35,7 @@ See the LICENSE file for full license text.
 == Rights
 
 This software includes parts of below projects.
-They are under their licenses.
-
-また、本ソフトウェアには、下記プロジェクトの一部が含まれています。
-これらについては、それぞれの作者のライセンスに従います。
+They are under their own licenses.
 
 juniversalchardet
   http://code.google.com/p/juniversalchardet/
@@ -50,13 +47,12 @@ ColorPickerDialog
   from Android APIDemos by Google.
    as Apache License.
 
-== Contacts
-* If you want to contact me (developer) , send message on the blog , mail or Twitter.
 
-* 動作報告およびバグレポートは、ブログコメント、メール、Twitterなどでご連絡ください。
+== Contacts
+* Alex Kapranoff <kapranoff@gmail.com> -- about the aGrep again fork.
 
 
 ----------------------------------------------------------
 aGrep Copyright (C) 2010, Aquamarine Networks.
-
 aGrep again Copyright (C) 2025, Alex Kapranoff.
+
