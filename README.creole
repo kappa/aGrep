@@ -1,5 +1,4 @@
-aGrep again
-===========
+= aGrep again
 
 A modern fork of aGrep - Grep-like text search program for Android.
 
@@ -8,25 +7,25 @@ originally developed by Jiro and Aquamarine Networks.
 
 Supported OS: Android 5.0 (Lollipop) and above (minSdk 21)
 
-■Original aGrep Information
+== Original aGrep Information
 
 The original aGrep application:
-- Android Market: http://market.android.com/details?id=jp.sblo.pandora.aGrep
-- Documentation (English): https://sites.google.com/site/aquamarinepandora/home/agrep
-- Documentation (Japanese): https://sites.google.com/site/aquamarinepandora/home/agrepja
+* Android Market: http://market.android.com/details?id=jp.sblo.pandora.aGrep
+* Documentation (English): https://sites.google.com/site/aquamarinepandora/home/agrep
+* Documentation (Japanese): https://sites.google.com/site/aquamarinepandora/home/agrepja
 
 
-■Development Environment
-・Android Studio
-・Android SDK (compileSdk 34, targetSdk 34)
-・Repository: https://github.com/kappa/aGrep-again
+== Development Environment
+* Android Studio
+* Android SDK (compileSdk 34, targetSdk 34)
+* Repository: https://github.com/kappa/aGrep-again
 
-■License
+== License
 
-・This repository contains a maintained fork of the original aGrep.
+* This repository contains a maintained fork of the original aGrep.
   The software continues to be distributed under the NYSL license
   (Version 0.9982).
-・Clause A-4 of the NYSL requires modified versions to be released
+* Clause A-4 of the NYSL requires modified versions to be released
   under the modifier's own name. Releases and distributions from
   this repository therefore identify the current maintainers of this
   fork rather than the original author, while preserving the original
@@ -75,7 +74,7 @@ D. Above three clauses are applied both to source and binary
 ----------------------------------------
 
 
-■Rights
+== Rights
 
 This software includes parts of below projects.
 They are under their licenses.
@@ -93,10 +92,10 @@ ColorPickerDialog
   from Android APIDemos by Google.
    as Apache License.
 
-■Contacts
-・If you want to contact me (developer) , send message on the blog , mail or Twitter.
+== Contacts
+* If you want to contact me (developer) , send message on the blog , mail or Twitter.
 
-・動作報告およびバグレポートは、ブログコメント、メール、Twitterなどでご連絡ください。
+* 動作報告およびバグレポートは、ブログコメント、メール、Twitterなどでご連絡ください。
 
 
 ----------------------------------------------------------
