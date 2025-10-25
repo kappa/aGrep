@@ -6,6 +6,14 @@
 /app/build/
 /app/release/
 
+# Eclipse
+.project
+.classpath
+project.properties
+.settings/
+bin/
+gen/
+
 # Node.js
 node_modules/
 package-lock.json
