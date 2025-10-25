@@ -1,4 +1,4 @@
-package jp.sblo.pandora.aGrep;
+package dev.kappa.agrep_again;
 
 /**
  * Interface for search engine implementations that process grep operations.

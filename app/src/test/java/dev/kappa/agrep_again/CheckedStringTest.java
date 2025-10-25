@@ -1,4 +1,4 @@
-package jp.sblo.pandora.aGrep;
+package dev.kappa.agrep_again;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

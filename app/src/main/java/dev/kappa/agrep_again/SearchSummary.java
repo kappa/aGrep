@@ -1,4 +1,4 @@
-package jp.sblo.pandora.aGrep;
+package dev.kappa.agrep_again;
 
 import java.util.Collections;
 import java.util.List;

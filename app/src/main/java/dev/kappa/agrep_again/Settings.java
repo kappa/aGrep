@@ -1,4 +1,4 @@
-package jp.sblo.pandora.aGrep;
+package dev.kappa.agrep_again;
 
 import android.content.Intent;
 import android.net.Uri;

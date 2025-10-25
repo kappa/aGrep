@@ -1,4 +1,4 @@
-package jp.sblo.pandora.aGrep;
+package dev.kappa.agrep_again;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
