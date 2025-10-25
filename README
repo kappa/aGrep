@@ -1,25 +1,28 @@
-aGrep
-=====
+aGrep again
+===========
 
-- aGrep -
+A modern fork of aGrep - Grep-like text search program for Android.
 
-Grep like text search program for Android.
+This is a maintained and updated version of the original aGrep application,
+originally developed by Jiro and Aquamarine Networks.
 
-Support OS：Android 1.5 / 1.6 / 2.1 / 2.2
+**Application ID:** dev.kappa.agrep_again
+**Repository:** https://github.com/kappa/aGrep-again
+
+Support OS: Android 5.0 (Lollipop) and above (minSdk 21)
 
 
-■Download from Android Market
-http://market.android.com/details?id=jp.sblo.pandora.aGrep
+■Original aGrep Information
 
-■Document
-
-https://sites.google.com/site/aquamarinepandora/home/agrep (English)
-https://sites.google.com/site/aquamarinepandora/home/agrepja (Japanese)
+The original aGrep application:
+- Android Market: http://market.android.com/details?id=jp.sblo.pandora.aGrep
+- Documentation (English): https://sites.google.com/site/aquamarinepandora/home/agrep
+- Documentation (Japanese): https://sites.google.com/site/aquamarinepandora/home/agrepja
 
 
 ■Development Environment
-・Eclipse for Java
-・Android SDK (SDK version 3 Cupcake)
+・Android Studio
+・Android SDK (compileSdk 34, targetSdk 34)
 
 ■License
 
