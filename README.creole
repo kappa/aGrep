@@ -5,7 +5,7 @@ A modern fork of aGrep - Grep-like text search program for Android.
 This is a maintained and updated version of the original aGrep application,
 originally developed by Jiro and Aquamarine Networks.
 
-Supported OS: Android 5.0 (Lollipop) and above (minSdk 21)
+Supported OS: Android 7.0 (Nougat) and above (minSdk 24)
 
 == Original aGrep Information
 
