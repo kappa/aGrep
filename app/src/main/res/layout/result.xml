@@ -40,7 +40,7 @@
       android:textAppearance="?android:attr/textAppearanceSmall" />
   </LinearLayout>
 
-  <jp.sblo.pandora.aGrep.GrepView
+  <dev.kappa.agrep_again.GrepView
     android:id="@+id/DicView01" android:layout_width="fill_parent"
     android:layout_height="0dp"
     android:layout_weight="1" />

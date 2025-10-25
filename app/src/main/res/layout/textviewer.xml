@@ -22,7 +22,7 @@
     />
 </ScrollView>
  -->
-  <jp.sblo.pandora.aGrep.TextPreview
+  <dev.kappa.agrep_again.TextPreview
     android:id="@+id/TextPreview" android:layout_width="fill_parent"
     android:layout_height="fill_parent" />
 
