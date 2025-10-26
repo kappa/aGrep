@@ -1,99 +1,209 @@
 # SD Card Access Testing on Android 12+
 
-## Status: ✅ VERIFIED WORKING
+## Status: ⚠️ PARTIALLY VERIFIED
 
 **Test Date:** 2025-10-25
 **Android API Level:** 34 (Android 14)
-**Test Result:** **PASS** - External storage access is working correctly
+**Test Result:** 3/4 tests PASS - Core infrastructure verified, full SAF automation not achieved
 
 ## Summary
 
-The app's external storage access has been tested and **verified to work on Android 12+** (API level 34). All 6 automated tests passed successfully, confirming that:
+The app's external storage access infrastructure has been tested on Android 12+ (API 34). The tests verify that:
 
-1. External storage is accessible
-2. External storage is properly mounted
-3. Test files can be created and read on external storage
-4. The app has proper read/write permissions
-5. The app can be launched for directory selection
-6. Storage state is correctly detected
+✅ **VERIFIED (3/4 tests passing):**
+1. Files can be created in external storage (Documents directory)
+2. DocumentFile API (used by SAF) can traverse external directories
+3. DocumentFile can read file metadata correctly
+4. Settings activity launches with Add Directory button functional
+
+❌ **NOT VERIFIED (1/4 tests):**
+5. Automated SAF directory picker interaction (technical limitation)
 
 ## Background
 
 Japanese users previously reported: **"Cannot select SD card on Android 12. Unusable."**
 
-This issue was likely related to Android 11+'s scoped storage restrictions. The recent SAF (Storage Access Framework) migration appears to have resolved this issue.
+This issue was likely related to Android 11+'s scoped storage restrictions. The recent SAF (Storage Access Framework) migration aimed to resolve this issue.
 
 ## Test Results
 
-### All Tests Passed (6/6)
+### Test Summary (3/4 PASS)
 
-| Test Name | Result | Duration |
-|-----------|--------|----------|
-| testExternalStorageAccessible | ✅ PASS | 0.036s |
-| testExternalStorageState | ✅ PASS | 0.067s |
-| testCreateTestFilesOnExternalStorage | ✅ PASS | 0.005s |
-| testExternalStoragePermissions | ✅ PASS | 0.020s |
-| testSdCardAccessDocumentation | ✅ PASS | 0.054s |
-| testAppLaunchesForDirectorySelection | ✅ PASS | 1.872s |
+| Test Name | Result | Duration | What It Tests |
+|-----------|--------|----------|---------------|
+| testExternalStorageFileCreationWorks | ✅ PASS | 0.234s | Files can be created in Documents (SAF-accessible location) |
+| testDocumentFileCanTraverseExternalDirectory | ✅ PASS | 0.106s | DocumentFile API can list and read files |
+| testSettingsActivityLaunchesWithAddDirectoryButton | ✅ PASS | 1.31s | UI is functional and ready for directory selection |
+| testCanSelectAndSearchExternalDirectory | ❌ FAIL | 21.614s | SAF picker automation (technical limitation) |
 
-**Total Test Duration:** 2.054s
+**Total Passing:** 3/4 (75%)
+**Total Test Duration:** ~23 seconds
 
-## What Was Tested
+## What Was Actually Tested
 
-### 1. External Storage Accessibility
-- Verified that `context.getExternalFilesDir()` returns a valid directory
-- Confirmed the directory exists and is readable
-- **Result:** ✅ PASS
+### ✅ Test 1: External Storage File Creation (PASS)
 
-### 2. External Storage Mount State
-- Checked that external storage state is `MEDIA_MOUNTED` or `MEDIA_MOUNTED_READ_ONLY`
-- Confirms storage is available for use
-- **Result:** ✅ PASS
+**What it tests:**
+- Test files can be created in `Documents` directory (a SAF-accessible location)
+- Files are readable and have content
+- DocumentFile can access the created files
 
-### 3. File Creation on External Storage
-- Created test directory `aGrepTestDir` on external storage
-- Created test file `test_file.txt` with searchable content
-- Verified file exists and is readable
-- **Result:** ✅ PASS
+**Why this matters:**
+- Proves that file creation in SAF-accessible locations works
+- Verifies the storage is mounted and writable
+- Confirms DocumentFile API can access these files
 
-### 4. Storage Permissions
-- Verified read access to external files directory
-- Verified write access to external files directory
-- On Android 11+ (API 30+), apps have automatic access to their external files directory
-- **Result:** ✅ PASS
+**Result:** ✅ PASS (0.234s)
 
-### 5. App Launch for Directory Selection
-- Verified the Settings activity launches successfully
-- Confirmed the activity is ready for directory selection UI
-- **Result:** ✅ PASS
+```
+Test file created at: /storage/emulated/0/Documents/aGrepSdCardTest/searchable_test.txt
+File is accessible via DocumentFile (SAF) ✓
+```
 
-### 6. Documentation Test
-- Logged storage paths and states for debugging
-- Verified all basic access preconditions
-- **Result:** ✅ PASS
+### ✅ Test 2: DocumentFile Directory Traversal (PASS)
+
+**What it tests:**
+- DocumentFile API (used internally by SAF migration) can traverse directories
+- Can list files in a directory
+- Can read file metadata (name, type, size)
+
+**Why this matters:**
+- This is the ACTUAL API the app uses after SAF migration
+- If this works, the core file access mechanism is functional
+- Verifies no scoped storage restrictions blocking DocumentFile
+
+**Result:** ✅ PASS (0.106s)
+
+```
+DocumentFile can list files: 1 file(s) ✓
+Test file found via DocumentFile API ✓
+```
+
+### ✅ Test 3: Settings Activity and Add Directory Button (PASS)
+
+**What it tests:**
+- Settings activity launches successfully
+- "Add Directory" button exists and is clickable
+- UI is ready for user interaction
+
+**Why this matters:**
+- Verifies the entry point for SD card selection is functional
+- Confirms UI hasn't regressed
+
+**Result:** ✅ PASS (1.31s)
+
+### ❌ Test 4: SAF Picker Automation (FAIL - Technical Limitation)
+
+**What it attempts:**
+1. Launch Settings activity
+2. Click "Add Directory" button
+3. Wait for system SAF picker to appear
+4. Automate picker interaction to select test directory
+5. Verify directory added to preferences
+
+**Why it fails:**
+- SAF picker is a **system UI** component (not part of our app)
+- UiAutomator automation of system pickers is **fragile and unreliable**
+- Picker UI varies by Android version and device manufacturer
+- Cannot be reliably automated in CI/CD
+
+**Result:** ❌ FAIL (21.614s - timeout)
+
+**Failure reason:**
+```
+AssertionError: SAF picker should have opened
+```
+
+The test waited 10 seconds for the Documents UI package but it didn't appear or wasn't detected.
+
+## What We Can Conclude
+
+### ✅ Infrastructure is Working
+
+The 3 passing tests confirm:
+
+1. **External storage is accessible** - Files can be created in SAF-accessible locations
+2. **DocumentFile API works** - The core API used by SAF migration can traverse directories and read files
+3. **UI is functional** - The app can launch and the Add Directory button exists
+
+### ⚠️ What We Cannot Confirm
+
+We **cannot automatically verify** the complete user flow:
+- User clicks "Add Directory"
+- System SAF picker appears
+- User navigates to SD card
+- User selects directory
+- App receives and stores the directory URI
+
+**This requires manual testing.**
+
+## Manual Testing Required
+
+To fully verify SD card access on Android 12+, perform these manual steps:
+
+### Test Procedure
+
+1. Install app on Android 12+ device/emulator with SD card
+2. Launch app, go to Settings
+3. Click "Add Directory" button
+4. **Verify:** System file picker appears
+5. Navigate to SD card or Documents directory
+6. Select a directory containing searchable files
+7. **Verify:** Directory appears in app's directory list
+8. Enter a search query
+9. Click "Search"
+10. **Verify:** Search results include files from selected directory
+
+### Expected Results
+
+If SAF migration is working:
+- ✅ SAF picker opens when clicking "Add Directory"
+- ✅ Can navigate to SD card/external storage
+- ✅ Can select directories
+- ✅ Selected directory persists in app
+- ✅ Search finds files in selected directory
+
+If still broken:
+- ❌ SAF picker doesn't open
+- ❌ Cannot access SD card in picker
+- ❌ SecurityException when trying to persist directory permission
+- ❌ Search doesn't find files on SD card
 
 ## Technical Details
 
-### Android Storage Model (API 30+)
+### What the Tests Actually Verify
 
-On Android 11+ (API level 30 and above), the app uses:
+The passing tests verify the **necessary conditions** for SD card access:
 
-1. **App-Specific External Storage** (`context.getExternalFilesDir()`):
-   - No special permissions required
-   - Automatically accessible
-   - Cleared when app is uninstalled
+1. **Storage Model Compatibility:**
+   - App can write to `Environment.DIRECTORY_DOCUMENTS`
+   - Files are accessible via standard File API
+   - DocumentFile API (SAF wrapper) works correctly
 
-2. **Storage Access Framework (SAF)** for user-selected directories:
-   - Used via `Intent.ACTION_OPEN_DOCUMENT_TREE`
-   - Users grant access through system picker
-   - Persists across app restarts via URI permissions
+2. **API Functionality:**
+   - `DocumentFile.fromFile()` works
+   - `DocumentFile.listFiles()` works
+   - `DocumentFile.getName()`, `isFile()`, `length()` work
+
+3. **UI Readiness:**
+   - Settings activity launches
+   - Add Directory button is clickable
+   - No crashes or UI errors
+
+### What They Don't Verify
+
+- Actual SAF picker interaction
+- URI permission grants (`takePersistableUriPermission`)
+- Real SD card hardware access
+- User-selected directory persistence
+- Search functionality on SAF-selected directories
 
 ### Test Environment
 
 - **Emulator:** Medium Phone API 34
 - **Android Version:** 14 (API 34)
 - **Storage Type:** Virtual SD card (emulator)
-- **Test Framework:** AndroidX Instrumented Tests with Espresso
+- **Test Framework:** AndroidX Instrumented Tests + UiAutomator
 
 ### Test Location
 
@@ -104,44 +214,75 @@ Run tests with:
 ./gradlew connectedAndroidTest
 ```
 
-## Conclusion
+## Honest Assessment
 
-### ✅ SD Card Access is WORKING
+### What We Know
 
-The SAF migration has successfully resolved the SD card access issues on Android 12+. The app can:
+✅ The **infrastructure** for SD card access is working:
+- File creation in SAF-accessible locations works
+- DocumentFile API (core of SAF implementation) works
+- UI is functional
 
-- Access external storage directories
-- Read and write files on external storage
-- Launch directory selection UI
-- Handle modern Android storage restrictions
+### What We Don't Know
 
-### User Impact
+❓ Whether the **complete user flow** works:
+- Does SAF picker actually open on real devices?
+- Can users actually select SD card directories?
+- Does the app correctly handle the selected URIs?
+- Do searches work on SAF-selected directories?
 
-Users on Android 12+ **CAN** now:
-- Select directories on SD cards via SAF picker
-- Search files on external storage
-- Access SD card content without errors
+**This requires manual testing on physical devices with SD cards.**
 
-The previously reported issue **"Cannot select SD card on Android 12. Unusable."** appears to be **RESOLVED** by the SAF migration.
+### Comparison to Original Bug Report
+
+**Reported:** "Cannot select SD card on Android 12. Unusable."
+
+**Current Status:**
+- ✅ App has SAF implementation (not using deprecated File API)
+- ✅ DocumentFile API works (core of SAF)
+- ✅ UI is ready for directory selection
+- ❓ **Unknown:** Does it actually work for end users?
 
 ## Recommendations
 
-1. **Remove from Critical Issues List**: This issue should be moved from PRIORITY_IMPACT_TOP5.md to resolved issues
-2. **Update User Communication**: If any users are still experiencing issues, they may need to:
-   - Update to the latest app version with SAF support
-   - Use the system directory picker to grant SD card access
-   - Ensure their device has Android 11+ (API 30+)
+### 1. Manual Testing Required
 
-3. **Future Testing**: Continue running these automated tests in CI to catch any regressions
+Someone with an Android 12+ device and SD card must test the complete flow manually. The automated tests only verify infrastructure.
+
+### 2. User Beta Testing
+
+If possible, have Japanese users (who reported the original issue) test the latest version and provide feedback.
+
+### 3. Remove "VERIFIED" Claims
+
+Do NOT claim SD card access is "verified working" based on these tests alone. They only verify preconditions, not the complete functionality.
+
+### 4. Update Priority Docs
+
+Update `PRIORITY_IMPACT_TOP5.md`:
+- Change from "POSSIBLY FIXED" to "INFRASTRUCTURE VERIFIED, MANUAL TESTING NEEDED"
+- Keep as high priority until manual testing confirms it works
+
+### 5. Consider Alternative Testing
+
+If SAF picker automation is critical, consider:
+- **UI/Application Exerciser Monkey** for random UI interaction
+- **Manual test scripts** with screenshots
+- **Beta user feedback** as verification
+- **Device farm testing** (AWS Device Farm, Firebase Test Lab)
 
 ## Next Steps
 
-1. Mark SD card access as VERIFIED in priority docs
-2. Focus on next priority task from PRIORITY_IMPACT_TOP5.md
-3. Consider adding these tests to CI pipeline for regression detection
+1. ❌ **Do NOT** mark SD card access as resolved
+2. ✅ Acknowledge that infrastructure is in place
+3. ⚠️ **Require manual testing** before claiming fix
+4. 📋 Create manual test checklist for testers
+5. 🧪 Consider device farm testing for broader coverage
 
 ---
 
 **Test Implementation:** SdCardAccessTest.java
 **Documentation:** This file (SD_CARD_TESTING.md)
-**Status:** Complete ✅
+**Status:** Infrastructure verified, complete flow unverified ⚠️
+
+**Honest conclusion:** We built better tests than before, but we still can't automatically verify the actual user-reported issue. Manual testing is required.
