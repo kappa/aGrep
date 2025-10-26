@@ -167,6 +167,15 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
             this.prefs = prefs;
         }
 
+        private static void closeQuietly(Closeable closeable) {
+            if (closeable != null) {
+                try {
+                    closeable.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
+
         @Override
         protected void onPreExecute()
         {
@@ -248,9 +257,9 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
             } catch (IOException e1) {
                 e1.printStackTrace();
             } finally {
-                activity.closeQuietly(br);
-                activity.closeQuietly(is);
-                activity.closeQuietly(rawStream);
+                closeQuietly(br);
+                closeQuietly(is);
+                closeQuietly(rawStream);
             }
             return false;
         }
