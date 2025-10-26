@@ -16,6 +16,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 public class GrepView extends ListView {
 
@@ -64,8 +65,8 @@ public class GrepView extends ListView {
         setFocusable(true);
         setFocusableInTouchMode(true);
         setFastScrollEnabled(true);
-        setBackgroundColor(Color.WHITE);
-        setCacheColorHint(Color.WHITE);
+        setBackgroundColor(ContextCompat.getColor(context, R.color.color_background));
+        setCacheColorHint(ContextCompat.getColor(context, R.color.color_background));
         setDividerHeight(2);
         setOnItemClickListener((parent, view, position, id) -> {
             if (mCallback != null) {
@@ -146,8 +147,8 @@ public class GrepView extends ListView {
                 holder.Index = view.findViewById(R.id.ListIndex);
                 holder.kwic = view.findViewById(R.id.ListPhone);
 
-                holder.Index.setTextColor(Color.BLACK);
-                holder.kwic.setTextColor(Color.BLACK);
+                holder.Index.setTextColor(ContextCompat.getColor(getContext(), R.color.color_on_background));
+                holder.kwic.setTextColor(ContextCompat.getColor(getContext(), R.color.color_on_background));
 
                 holder.Index.setTextSize(mFontSize);
                 holder.kwic.setTextSize(mFontSize);

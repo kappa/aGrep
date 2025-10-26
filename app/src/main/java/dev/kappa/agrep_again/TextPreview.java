@@ -13,6 +13,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 public class TextPreview extends ListView {
 
@@ -39,8 +40,8 @@ public class TextPreview extends ListView {
         setFocusable(true);
         setFocusableInTouchMode(true);
         setFastScrollEnabled(true);
-        setBackgroundColor(Color.WHITE);
-        setCacheColorHint(Color.WHITE);
+        setBackgroundColor(ContextCompat.getColor(context, R.color.color_background));
+        setCacheColorHint(ContextCompat.getColor(context, R.color.color_background));
         setDividerHeight(0);
     }
 
@@ -64,7 +65,7 @@ public class TextPreview extends ListView {
             TextView view = (TextView)convertView;
             if ( view == null ) {
                 view = (TextView)inflate(getContext() , R.layout.textpreview_row , null );
-                view.setTextColor(Color.BLACK);
+                view.setTextColor(ContextCompat.getColor(getContext(), R.color.color_on_background));
                 view.setTextSize(mFontSize);
             }
             CharSequence d = getItem(position);
