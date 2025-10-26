@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -138,7 +139,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
         } else {
             setTitle(getString(R.string.app_name));
         }
-        mTask = new TextLoadTask();
+        mTask = new TextLoadTask(this, mPatternText, mLine, mPrefs);
         mTask.execute(mSourceUri);
     }
 
@@ -152,8 +153,19 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
         }
         return uri.toString();
     }
-    class TextLoadTask extends AsyncTask<Uri, Integer, Boolean >{
-        int mOffsetForLine=-1;
+    static class TextLoadTask extends AsyncTask<Uri, Integer, Boolean >{
+        private final WeakReference<TextViewer> activityRef;
+        private final ArrayList<CharSequence> tempData = new ArrayList<>();
+        private final String patternText;
+        private final int targetLine;
+        private final Prefs prefs;
+
+        TextLoadTask(TextViewer activity, String patternText, int targetLine, Prefs prefs) {
+            this.activityRef = new WeakReference<>(activity);
+            this.patternText = patternText;
+            this.targetLine = targetLine;
+            this.prefs = prefs;
+        }
 
         @Override
         protected void onPreExecute()
@@ -171,6 +183,11 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
                 return false;
             }
 
+            TextViewer activity = activityRef.get();
+            if (activity == null) {
+                return false;
+            }
+
             InputStream rawStream = null;
             BufferedInputStream is = null;
             BufferedReader br = null;
@@ -182,7 +199,7 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
                     }
                     rawStream = new FileInputStream(f);
                 } else {
-                    rawStream = getContentResolver().openInputStream(target);
+                    rawStream = activity.getContentResolver().openInputStream(target);
                     if (rawStream == null) {
                         return false;
                     }
@@ -218,7 +235,10 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
 
                     String text;
                     while(  ( text = br.readLine() )!=null ){
-                        mData.add( text );
+                        if (isCancelled()) {
+                            return false;
+                        }
+                        tempData.add( text );
 
                     }
                     return true;
@@ -228,39 +248,47 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
             } catch (IOException e1) {
                 e1.printStackTrace();
             } finally {
-                closeQuietly(br);
-                closeQuietly(is);
-                closeQuietly(rawStream);
+                activity.closeQuietly(br);
+                activity.closeQuietly(is);
+                activity.closeQuietly(rawStream);
             }
             return false;
         }
 
         @Override
         protected void onPostExecute(Boolean result) {
-            if (result ) {
+            TextViewer activity = activityRef.get();
+            if (activity == null) {
+                return;
+            }
 
-                TextPreview.Adapter adapter = new TextPreview.Adapter(getApplicationContext(),  R.layout.textpreview_row, R.id.TextPreview, mData);
-                mData = null;
+            if (result) {
+                TextPreview.Adapter adapter = new TextPreview.Adapter(activity.getApplicationContext(),  R.layout.textpreview_row, R.id.TextPreview, tempData);
 
                 Pattern pattern = null;
 
-                if (!TextUtils.isEmpty(mPatternText)) {
-                    if ( mPrefs.mIgnoreCase ){
-                        pattern = Pattern.compile(mPatternText, Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE|Pattern.MULTILINE );
+                if (!TextUtils.isEmpty(patternText)) {
+                    if ( prefs.mIgnoreCase ){
+                        pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE|Pattern.UNICODE_CASE|Pattern.MULTILINE );
                     }else{
-                        pattern = Pattern.compile(mPatternText);
+                        pattern = Pattern.compile(patternText);
                     }
                 }
 
-                adapter.setFormat(pattern , mPrefs.mHighlightFg , mPrefs.mHighlightBg , mPrefs.mFontSize );
-                mTextPreview.setAdapter( adapter );
+                adapter.setFormat(pattern , prefs.mHighlightFg , prefs.mHighlightBg , prefs.mFontSize );
 
-                int height = mTextPreview.getHeight();
-                if (mLine > 0) {
-                    mTextPreview.setSelectionFromTop( mLine-1 , height / 4 );
+                TextPreview textPreview = activity.mTextPreview;
+                if (textPreview != null) {
+                    textPreview.setAdapter(adapter);
+
+                    int height = textPreview.getHeight();
+                    if (targetLine > 0) {
+                        textPreview.setSelectionFromTop(targetLine - 1, height / 4);
+                    }
                 }
-                mTextPreview = null;
-                mTask = null;
+
+                activity.mTextPreview = null;
+                activity.mTask = null;
             }
         }
     }
@@ -427,6 +455,10 @@ public class TextViewer extends AppCompatActivity implements OnItemLongClickList
 
     @Override
     protected void onDestroy() {
+        if (mTask != null) {
+            mTask.cancel(true);
+            mTask = null;
+        }
         clearSharedUriGrant();
         super.onDestroy();
     }
