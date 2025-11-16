@@ -1,0 +1,7 @@
+Initial release of aGrep again - a modern fork of the classic aGrep text search tool.
+
+• Updated for modern Android versions (7.0+)
+• Automatic dark theme support
+• Enhanced SD card access for Android 12+
+• Improved stability and performance
+• Maintained and actively developed fork

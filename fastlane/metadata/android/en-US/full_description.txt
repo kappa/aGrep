@@ -1,0 +1,17 @@
+A modern fork of aGrep - a powerful grep-like text search program for Android.
+
+This is a maintained and updated version of the original aGrep application, originally developed by Jiro and Aquamarine Networks.
+
+Features:
+• Fast and efficient text search across files
+• Regular expression support
+• Search in multiple file formats
+• User-friendly Android interface
+• Optimized for modern Android versions
+• Dark theme support
+• SD card access for Android 12+
+
+Supported OS: Android 7.0 (Nougat) and above
+
+This app is open source and distributed under the NYSL license (Version 0.9982).
+Source code available at: https://github.com/kappa/aGrep-again

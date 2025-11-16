@@ -1,0 +1,109 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  desc "Runs all the tests"
+  lane :test do
+    gradle(task: "test")
+  end
+
+  desc "Build a beta APK for testing"
+  lane :beta do
+    # Clean the project
+    gradle(task: "clean")
+
+    # Build the APK
+    gradle(
+      task: "assemble",
+      build_type: "Release"
+    )
+
+    # The APK will be located at: app/build/outputs/apk/release/app-release-unsigned.apk
+    # or app/build/outputs/apk/release/app-release.apk if signed
+
+    UI.success("✅ Beta APK generated successfully!")
+    UI.message("📦 APK location: #{lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]}")
+  end
+
+  desc "Prepare release for F-Droid"
+  lane :fdroid do
+    # F-Droid builds from source, so this lane primarily ensures
+    # that metadata and screenshots are properly organized
+
+    UI.message("🤖 Preparing F-Droid release...")
+
+    # Verify metadata exists
+    unless File.directory?("../fastlane/metadata/android")
+      UI.important("⚠️  Metadata directory not found. Creating structure...")
+      UI.message("Please populate metadata files with app descriptions and screenshots")
+    end
+
+    # Build APK to verify everything works
+    gradle(task: "clean")
+    gradle(
+      task: "assemble",
+      build_type: "Release"
+    )
+
+    UI.success("✅ F-Droid preparation complete!")
+    UI.message("📝 Make sure to update metadata in fastlane/metadata/android/")
+    UI.message("📸 Add screenshots to fastlane/metadata/android/en-US/images/")
+    UI.message("🔗 F-Droid will build the app from source using the Gradle files")
+  end
+
+  desc "Deploy a new version to the Google Play Store"
+  lane :playstore do
+    # Build the release bundle (AAB is preferred by Google Play)
+    gradle(task: "clean")
+    gradle(
+      task: "bundle",
+      build_type: "Release"
+    )
+
+    # Upload to Google Play Store
+    # Note: This requires proper setup of Google Play credentials
+    # See: https://docs.fastlane.tools/actions/upload_to_play_store/
+    upload_to_play_store(
+      track: 'internal',  # Can be 'internal', 'alpha', 'beta', or 'production'
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      skip_upload_screenshots: false,
+      skip_upload_images: false,
+      skip_upload_metadata: false
+    )
+
+    UI.success("✅ Successfully uploaded to Google Play Store!")
+  end
+
+  desc "Deploy a new beta version to Google Play Store (internal track)"
+  lane :playstore_beta do
+    gradle(task: "clean")
+    gradle(
+      task: "bundle",
+      build_type: "Release"
+    )
+
+    upload_to_play_store(
+      track: 'beta',
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      skip_upload_screenshots: true,
+      skip_upload_images: true,
+      skip_upload_metadata: false
+    )
+
+    UI.success("✅ Successfully uploaded beta to Google Play Store!")
+  end
+end
