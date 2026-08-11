@@ -17,7 +17,7 @@ The original aGrep application:
 
 == Development Environment
 * Android Studio
-* Android SDK (compileSdk 34, targetSdk 34)
+* Android SDK (compileSdk 36, targetSdk 36)
 * Repository: https://github.com/kappa/aGrep-again
 
 == License

@@ -284,7 +284,7 @@ lint {
 **Files**: `app/build.gradle`
 
 **Outdated Dependencies**:
-1. `compileSdk 34` → 36 available
+1. `compileSdk 36` → up to date (was 34)
 2. `androidx.appcompat:appcompat:1.6.1` → 1.7.1 available
 3. `com.google.android.material:material:1.11.0` → 1.13.0 available
 4. `androidx.lifecycle:lifecycle-runtime:2.7.0` → 2.9.4 available
@@ -312,23 +312,23 @@ lint {
 
 ---
 
-#### 10. OldTargetApi (1 warning - targetSdk 34 vs 36)
+#### 10. OldTargetApi (resolved - targetSdk 36)
 
 **File**: `app/build.gradle:12`
 
 **Issue**: Not targeting the absolute latest Android version
 
 ```gradle
-targetSdk 34
+targetSdk 36
 ```
 
-**Current Latest**: 36 (Android 16 preview)
+**Current Latest**: 36 (Android 16) - now compliant
 
 **Why Not Update Immediately**:
 - Each targetSdk increase requires handling new behavior changes
 - Android 15 (API 35) introduced many breaking changes
 - Need thorough testing on new Android versions
-- Google Play requires targetSdk 34+ (already compliant)
+- Google Play requires targetSdk 36+ as of Aug 30, 2026 (now compliant)
 
 **Recommendation**:
 - Create separate task for targetSdk update
